@@ -1,0 +1,3259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Résidéo - Gestion Immobilière Connectée | AddaWeb</title>
+
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#004d40">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Résidéo">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" type="image/png" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- SDK Officiel Firebase v10 (Compatibilité & Réseau) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #f8fafc;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+    /* Neutralisation totale et absolue du badge et du volet Netlify sur smartphone & PC */
+    [class*="netlify"], [id*="netlify"], iframe[src*="netlify"], netlify-drawer, #netlify-drawer, .netlify-badge, #netlify-badge, a[href*="netlify.com"], [data-netlify-deploy-id], [data-netlify-preview], [data-netlify-drawer] {
+      display: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      position: absolute !important;
+      left: -99999px !important;
+      top: -99999px !important;
+      width: 0 !important;
+      height: 0 !important;
+      max-width: 0 !important;
+      max-height: 0 !important;
+      z-index: -999999 !important;
+    }
+    /* Empêche le zoom saccadé automatique d'iOS Safari lors du clic dans un champ */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+    @media (min-width: 640px) {
+      input, select, textarea {
+        font-size: 13px !important;
+      }
+    }
+    nav.fixed { z-index: 99999 !important; }
+
+    @media print {
+      body * { visibility: hidden !important; }
+      #printAreaContainer, #printAreaContainer * { 
+        visibility: visible !important; 
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      #printAreaContainer {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 210mm !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        display: block !important;
+        background: transparent !important;
+      }
+      @page { 
+        size: A4 portrait; 
+        margin: 6mm; 
+      }
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <div id="printAreaContainer" class="hidden"></div>
+
+  <!-- ==================== PORTAIL DE CONNEXION / INSCRIPTION ==================== -->
+  <div id="authScreen" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-100 space-y-4 text-center my-auto max-h-[96vh] overflow-y-auto">
+      
+      <!-- En-tête avec Logo -->
+      <div class="space-y-1.5">
+        <img src="icon-192.png" alt="Logo Résidéo" class="w-16 h-16 mx-auto rounded-2xl shadow-md border border-slate-100 object-cover">
+        <div>
+          <h1 class="text-2xl font-black text-slate-900 tracking-tight">Résidéo</h1>
+          <p class="text-xs text-slate-500 font-medium">Plateforme sécurisée • Développée par AddaWeb</p>
+        </div>
+      </div>
+
+      <!-- Sélecteur d'onglet : Connexion vs Inscription Résident -->
+      <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+        <button type="button" id="tabBtnLogin" onclick="switchAuthPortal('login')" class="py-2.5 text-xs font-black rounded-xl transition shadow-sm bg-white text-slate-900">
+          🔑 Se connecter
+        </button>
+        <button type="button" id="tabBtnRegister" onclick="switchAuthPortal('register')" class="py-2.5 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-900">
+          📝 Inscription Résident
+        </button>
+      </div>
+
+      <!-- FORMULAIRE 1 : CONNEXION SÉCURISÉE (TOUS RÔLES) -->
+      <form id="formLogin" onsubmit="handleAuthLogin(event)" class="space-y-3 text-left">
+        <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600">
+          🔒 Entrez vos identifiants (Super Admin, Bailleur, Responsable de Loge, Gardien ou Résident).
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">E-mail ou Identifiant</label>
+          <input type="text" id="loginEmail" placeholder="exemple@domaine.fr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 font-medium" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Mot de passe</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-teal-500 font-medium" required>
+        </div>
+
+        <div id="loginError" class="hidden p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold text-center"></div>
+
+        <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="log-in" class="w-4 h-4 text-teal-400"></i>
+          <span>Se connecter</span>
+        </button>
+
+        <div class="pt-1 text-center">
+          <button type="button" onclick="showForgotPasswordAlert()" class="text-[11px] font-semibold text-slate-400 hover:text-teal-700 transition">
+            Mot de passe oublié ou perdu ?
+          </button>
+        </div>
+      </form>
+
+      <!-- FORMULAIRE 2 : INSCRIPTION RÉSIDENT (GÉOLOCALISATION GPS + ADRESSE) -->
+      <form id="formRegisterResident" onsubmit="handleResidentSelfRegister(event)" class="space-y-3 text-left hidden">
+        <div class="p-2.5 bg-teal-50 border border-teal-200 rounded-xl text-[11px] text-teal-900 leading-snug">
+          🏡 <strong>Inscription Résident :</strong> Renseignez votre logement pour accéder aux alertes et pannes de votre hall.
+        </div>
+
+        <div>
+          <button type="button" onclick="detectUserLocation()" class="w-full py-2 bg-teal-100 hover:bg-teal-200 text-teal-900 border border-teal-300 font-bold text-xs rounded-xl transition flex items-center justify-center space-x-1.5">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-teal-700"></i>
+            <span id="geoBtnText">📍 Me géolocaliser pour détecter mon immeuble</span>
+          </button>
+          <p id="geoDetectedText" class="text-[10px] text-emerald-700 font-bold mt-1 hidden"></p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Résidence / Immeuble</label>
+          <select id="regResidenceSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-teal-500" required>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nom</label>
+            <input type="text" id="regLastName" placeholder="Ex: Dupont" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Prénom</label>
+            <input type="text" id="regFirstName" placeholder="Ex: Jean" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium" required>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Bâtiment</label>
+            <input type="text" id="regBuilding" placeholder="Bât A" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-medium" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Étage</label>
+            <input type="text" id="regFloor" placeholder="3ème" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-medium" required>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-500 mb-1">N° Porte</label>
+            <input type="text" id="regDoor" placeholder="Apt 14" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-medium" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Adresse E-mail (Identifiant de connexion)</label>
+          <input type="email" id="regEmail" placeholder="votre.email@domaine.fr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Créer un mot de passe personnel</label>
+          <input type="password" id="regPassword" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-medium" required>
+        </div>
+
+        <div id="regError" class="hidden p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold text-center"></div>
+
+        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Créer mon compte Résident</span>
+        </button>
+      </form>
+
+      <!-- Pied de portail sécurisé -->
+      <div class="pt-2.5 border-t border-slate-200 text-center text-[11px] text-slate-400">
+        🔒 Accès sécurisé chiffré • Résidéo par <strong>AddaWeb</strong>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== APPLICATION PRINCIPALE ==================== -->
+  <div id="appContainer" class="hidden flex flex-col min-h-screen">
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 px-4 py-3 shadow-sm flex items-center justify-between no-print">
+      <div class="flex items-center space-x-3">
+        <img src="icon-192.png" alt="Logo" class="w-10 h-10 rounded-xl shadow-sm border border-slate-100 object-cover">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-extrabold text-lg text-slate-900 tracking-tight">Résidéo</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md border border-teal-200/60">Connect</span>
+          </div>
+          <p id="headerResName" class="text-xs text-slate-500 font-medium truncate max-w-[200px]">Résidence</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <span id="userBadgeRole" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 font-semibold text-slate-700 border border-slate-200">
+          Résident
+        </span>
+
+        <!-- Bouton Modification Mot de Passe Personnel (Disponible pour TOUS les utilisateurs connectés) -->
+        <button id="btnOpenPersonalPassword" onclick="openPersonalPasswordModal()" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition" title="Modifier mon mot de passe">
+          <i data-lucide="key" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Bouton Console Maître Super Admin (Visible UNIQUEMENT par AddaWeb) -->
+        <button id="btnSuperAdminMaster" onclick="openModal('modalSuperAdmin')" class="p-2 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition hidden" title="Console Complète Super Admin">
+          <i data-lucide="shield" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Bouton Déconnexion Directe (ferme la session et réaffiche l'écran de connexion) -->
+        <button onclick="handleSignOut()" class="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center space-x-1 border border-rose-200 transition" title="Fermer ma session">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Déconnexion</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 pt-4 sm:px-6 sm:pt-6 space-y-6 no-print">
+
+      <!-- ==================== BANDEAU DE SYNTHÈSE EN TEMPS RÉEL (KPIS TERRAIN) ==================== -->
+      <div id="kpiDashboardSummary" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-black">🔴</div>
+          <div>
+            <p id="kpiOpenCount" class="text-base sm:text-lg font-black text-slate-900 leading-tight">0</p>
+            <p class="text-[10px] font-bold uppercase text-slate-500">En attente</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-black">🔧</div>
+          <div>
+            <p id="kpiMandatedCount" class="text-base sm:text-lg font-black text-slate-900 leading-tight">0</p>
+            <p class="text-[10px] font-bold uppercase text-slate-500">Mandatés</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-black">🟢</div>
+          <div>
+            <p id="kpiResolvedCount" class="text-base sm:text-lg font-black text-slate-900 leading-tight">0</p>
+            <p class="text-[10px] font-bold uppercase text-slate-500">Résolus</p>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-black">📦</div>
+          <div>
+            <p id="kpiParcelsCount" class="text-base sm:text-lg font-black text-slate-900 leading-tight">0</p>
+            <p class="text-[10px] font-bold uppercase text-slate-500">Colis loge</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANDEAU GESTIONNAIRE BAILLEUR / SYNDIC & SUPER ADMIN -->
+      <div class="space-y-2 hidden" id="operatorBannerContainer">
+        <div class="bg-gradient-to-r from-teal-800 to-emerald-900 text-white p-4 rounded-2xl shadow-md space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2 text-xs sm:text-sm font-bold">
+              <i data-lucide="shield-check" class="w-5 h-5 text-teal-300"></i>
+              <span>Console Gestionnaire Copropriété</span>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[11px] text-teal-200 font-bold whitespace-nowrap">Immeuble :</span>
+              <select id="quickSwitchResidenceSelect" onchange="handleQuickSwitchResidence(this.value)" class="bg-teal-950/80 text-white text-xs font-bold px-2 py-1 rounded-xl border border-teal-500/50 focus:ring-1 focus:ring-teal-400">
+              </select>
+            </div>
+            <div class="flex items-center space-x-1.5">
+              <button onclick="openModal('modalSuperAdmin')" class="bg-teal-700 hover:bg-teal-600 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1" title="Créer des résidences, halls ou ajouter des gardiens">
+                <i data-lucide="building" class="w-3.5 h-3.5"></i>
+                <span>Gestion Immeubles & Gardiens</span>
+              </button>
+              <button onclick="exportIncidentsToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center space-x-1" title="Exporter le registre en Excel / CSV">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Export Excel</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2.5 border-t border-teal-700/60 flex flex-wrap items-center justify-between text-xs text-teal-100 gap-2">
+            <div>
+              <p class="font-semibold text-white">Support Technique AddaWeb</p>
+              <p class="text-[11px] text-teal-200 mt-0.5">Contact développeur & gestionnaire de plateforme</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <a href="tel:0787042215" class="inline-flex items-center space-x-1 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg text-white font-mono text-xs transition border border-white/20">
+                <i data-lucide="phone" class="w-3.5 h-3.5 text-teal-300"></i>
+                <span>07 87 04 22 15</span>
+              </a>
+              <a href="mailto:contact@addaweb.fr" class="inline-flex items-center space-x-1 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg text-teal-100 hover:text-white font-mono text-xs transition border border-white/20">
+                <i data-lucide="mail" class="w-3.5 h-3.5 text-teal-300"></i>
+                <span>contact@addaweb.fr</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANDEAU ÉMARGEMENT PROPRETÉ -->
+      <div id="cleaningStatusCard" class="bg-white border border-teal-100 rounded-2xl p-3.5 shadow-sm flex items-center justify-between transition hover:border-teal-300">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-700">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[10px] font-black uppercase tracking-wider bg-teal-100/70 text-teal-900 px-2 py-0.5 rounded-md">Propreté & Parties Communes</span>
+            </div>
+            <p id="cleaningLastText" class="text-xs font-bold text-slate-800 mt-0.5">Dernier passage : En attente d'émargement</p>
+          </div>
+        </div>
+        <!-- Bouton Émarger : MASQUÉ POUR LE RÉSIDENT ET LE BAILLEUR (Visible uniquement Gardien, Resp. Loge, Super Admin) -->
+        <button id="btnOpenCleaningLog" onclick="openModal('modalCleaningLog')" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition flex items-center space-x-1 flex-shrink-0 hidden">
+          <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-teal-400"></i>
+          <span>Émarger</span>
+        </button>
+      </div>
+
+      <!-- 1. PANNEAU DU HALL -->
+      <section id="sectionAnnouncements" class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="megaphone" class="w-5 h-5 text-teal-600"></i>
+            <h2 class="text-base font-bold text-slate-900 tracking-tight">Panneau d'affichage officiel du Hall</h2>
+          </div>
+          <div id="btnPublishAnnContainer" class="hidden">
+            <button onclick="openModal('modalCreateAnnouncement')" class="inline-flex items-center space-x-1.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-xl shadow-sm transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Publier un avis</span>
+            </button>
+          </div>
+        </div>
+        <div id="announcementsList" class="space-y-2.5"></div>
+      </section>
+
+      <!-- 2. SIGNALEMENTS & PANNES -->
+      <section class="space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 text-indigo-600"></i>
+            <h2 class="text-base font-bold text-slate-900 tracking-tight">Signalements & Interventions</h2>
+          </div>
+
+          <button onclick="openModal('modalCreateIncident')" class="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-sm transition">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Déclarer un incident</span>
+          </button>
+        </div>
+
+        <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar py-1">
+          <button onclick="setIncidentFilter('all')" class="filter-btn active px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white transition whitespace-nowrap" data-filter="all">Tous les actifs</button>
+          <button onclick="setIncidentFilter('devis')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 transition whitespace-nowrap" data-filter="devis">🟣 En Devis</button>
+          <button onclick="setIncidentFilter('communs')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition whitespace-nowrap" data-filter="communs">Parties Communes</button>
+          <button onclick="setIncidentFilter('privatifs')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition whitespace-nowrap" data-filter="privatifs">Mes Demandes</button>
+          <button onclick="setIncidentFilter('resolu')" class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition whitespace-nowrap" data-filter="resolu">🟢 Résolus</button>
+        </div>
+
+        <div id="incidentsList" class="space-y-3"></div>
+      </section>
+
+      <!-- 3. OUTILS STAFF (GARDIEN, RESP. LOGE, BAILLEUR) -->
+      <section id="sectionStaffTools" class="space-y-3 pt-4 border-t border-slate-200 hidden">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="briefcase" class="w-5 h-5 text-slate-700"></i>
+            <h3 class="text-base font-bold text-slate-900">Espace Bailleurs & Gardiens</h3>
+          </div>
+          <span class="text-xs bg-teal-50 text-teal-700 font-bold px-2 py-0.5 rounded-lg border border-teal-200">Gestion Locale</span>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3">
+          <button onclick="openPosterModal()" class="p-4 bg-white border border-slate-200 hover:border-teal-500 rounded-2xl shadow-sm text-left flex items-start space-x-3 transition group">
+            <div class="p-2.5 rounded-xl bg-teal-50 text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition">
+              <i data-lucide="qr-code" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-slate-900">Affiche Hall Officielle (QR Code)</h4>
+              <p class="text-xs text-slate-500 mt-0.5">Télécharger et imprimer l'affiche A4 avec le QR code d'accès au bâtiment.</p>
+            </div>
+          </button>
+          <button onclick="openModal('modalLostFound')" class="p-4 bg-white border border-slate-200 hover:border-amber-500 rounded-2xl shadow-sm text-left flex items-start space-x-3 transition group">
+            <div class="p-2.5 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition">
+              <span class="text-xl">📦</span>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h4 class="text-sm font-bold text-slate-900">Objets Trouvés & Colis en Loge</h4>
+                <span id="badgeLostFoundCount" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">0 en attente</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Enregistrer des clés, paquets et objets trouvés dans les parties communes.</p>
+            </div>
+          </button>
+          <button onclick="openModal('modalRegulatoryInspection')" class="p-4 bg-white border border-slate-200 hover:border-indigo-500 rounded-2xl shadow-sm text-left flex items-start space-x-3 transition group">
+            <div class="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition">
+              <i data-lucide="shield-alert" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h4 class="text-sm font-bold text-slate-900">Registre Sécurité & Contrôles Légaux</h4>
+                <span class="text-[10px] font-bold bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-md">Obligatoire AG</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">Émargement périodique : Ascenseur (6 sem), Porte parking, Chaufferie et Incendie.</p>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Espaceur bas de page 120px anti-recouvrement -->
+      <div style="height: 120px;" class="w-full flex-shrink-0 pointer-events-none" aria-hidden="true"></div>
+
+    </main>
+
+    <nav style="padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));" class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 pt-2 z-30 flex items-center justify-around shadow-lg no-print">
+      <button onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" class="flex flex-col items-center space-y-1 text-teal-600">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px] font-bold">Accueil</span>
+      </button>
+      <button onclick="openEmergencyModal()" class="flex flex-col items-center space-y-1 text-slate-500 hover:text-teal-600">
+        <i data-lucide="phone-call" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Astreintes</span>
+      </button>
+      <button onclick="openModal('modalCreateIncident')" class="-mt-6 w-12 h-12 rounded-full bg-teal-600 hover:bg-teal-700 text-white shadow-lg shadow-teal-600/40 flex items-center justify-center transition active:scale-95">
+        <i data-lucide="plus" class="w-6 h-6"></i>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== CONSOLE MAÎTRE DU SUPER ADMIN (ADDAWEB) ==================== -->
+  <div id="modalSuperAdmin" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <div class="flex items-center space-x-2">
+            <h3 class="font-extrabold text-lg text-slate-900">Console Super Admin AddaWeb</h3>
+            <span class="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 px-2 py-0.5 rounded">Gestion Totale</span>
+          </div>
+          <p class="text-xs text-slate-500">Créez et supprimez librement les résidences, comptes pros et comptes résidents</p>
+        </div>
+        <button onclick="closeModal('modalSuperAdmin')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <!-- 4 Onglets Super Admin -->
+      <div class="grid grid-cols-4 gap-1 bg-slate-100 p-1.5 rounded-2xl text-xs font-bold">
+        <button type="button" id="tabAdminResidencesBtn" onclick="switchSuperAdminTab('residences')" class="py-2 rounded-xl transition bg-white text-slate-900 shadow-sm text-center">
+          🏢 Résidences
+        </button>
+        <button type="button" id="tabAdminAccountsBtn" onclick="switchSuperAdminTab('accounts')" class="py-2 rounded-xl transition text-slate-600 hover:text-slate-900 text-center">
+          👥 Pros
+        </button>
+        <button type="button" id="tabAdminResidentsBtn" onclick="switchSuperAdminTab('residents')" class="py-2 rounded-xl transition text-slate-600 hover:text-slate-900 text-center">
+          🏡 Résidents
+        </button>
+        <button type="button" id="tabAdminSecurityBtn" onclick="switchSuperAdminTab('security')" class="py-2 rounded-xl transition text-slate-600 hover:text-slate-900 text-center">
+          🔐 Mon Mot de Passe
+        </button>
+      </div>
+
+      <!-- SECTION 1 : GESTION DES RÉSIDENCES (CRÉER / SUPPRIMER) -->
+      <div id="superAdminSectionResidences" class="space-y-4">
+        <form onsubmit="handleAddNewResidence(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 uppercase">Ajouter une nouvelle résidence</h4>
+            <span class="text-[10px] font-bold bg-teal-100 text-teal-800 px-2 py-0.5 rounded">Multi-Bâtiments</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Nom de la Résidence</label>
+              <input type="text" id="newResName" placeholder="Ex: Résidence Les Cerisiers" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Code Immeuble (Hall)</label>
+              <input type="text" id="newResCode" placeholder="Ex: CERI" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono uppercase" required>
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">Bâtiments (séparés par virgule)</label>
+            <input type="text" id="newResBuildings" placeholder="Ex: A, B, C" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+          </div>
+          <button type="submit" class="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-xl transition shadow-sm">
+            + Enregistrer cette résidence
+          </button>
+        </form>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase text-slate-500">Parc Actuel Enregistré</h4>
+            <span id="residencesCountBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">0 résidences</span>
+          </div>
+          <div id="adminResidencesList" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 2 : CRÉATION & SUPPRESSION DES COMPTES PROS (SERVICE CLÉ EN MAIN) -->
+      <div id="superAdminSectionAccounts" class="space-y-4 hidden">
+        <form onsubmit="handleSuperAdminCreateAnyAccount(event)" class="bg-purple-50/60 p-4 rounded-xl border border-purple-200 space-y-3 text-xs">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-purple-900 uppercase">Créer un compte professionnel (Service Clé en main)</h4>
+            <span class="text-[10px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded">AddaWeb Direct</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Rôle / Poste Professionnel</label>
+              <select id="superNewAccountRole" onchange="handleSuperRoleSelectionChange(this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-purple-900" required>
+                <option value="bailleur">🏢 Bailleur / Syndic (Gestion, Devis, AG)</option>
+                <option value="responsable_loge">🛡️ Responsable de Loge (Chef de site)</option>
+                <option value="gardien">🔑 Gardien d'immeuble (Émargement, Colis)</option>
+                <option value="custom">✨ Poste / Statut personnalisé (Régisseur, Agent d'astreinte, Accueil...)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Résidence Assignée</label>
+              <select id="superNewAccountResidence" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold" required>
+              </select>
+            </div>
+          </div>
+
+                    <div id="customRoleInputContainer" class="hidden p-3 bg-white border border-purple-300 rounded-xl space-y-1">
+            <label class="block font-extrabold text-purple-950 text-xs">✨ Intitulé exact du nouveau poste ou statut :</label>
+            <input type="text" id="superNewAccountCustomTitle" placeholder="Ex: Régisseur technique, Agent d'accueil Loge, Coordinateur travaux..." class="w-full bg-purple-50/50 border border-purple-200 rounded-lg px-2.5 py-1.5 font-bold text-purple-900 text-xs">
+            <p class="text-[10px] text-purple-600 italic">Ce titre apparaîtra sur son badge officiel et dans tous les registres de l'immeuble.</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Nom / Titulaire</label>
+              <input type="text" id="superNewAccountName" placeholder="Ex: Horizon Gestion ou Jean" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">E-mail (Identifiant)</label>
+              <input type="email" id="superNewAccountEmail" placeholder="contact@domaine.fr" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Mot de passe temporaire initial</label>
+              <input type="text" id="superNewAccountPassword" placeholder="Pass2026" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono" required>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-purple-700 italic">
+            * Ce mot de passe est temporaire. Le professionnel devra obligatoirement entrer son mot de passe secret personnel lors de sa 1ère connexion.
+          </p>
+
+          <button type="submit" class="w-full py-2 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl transition shadow-sm">
+            + Enregistrer directement ce compte
+          </button>
+        </form>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase text-slate-500">Comptes Professionnels Actifs</h4>
+            <span id="staffAccountsCountBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">0 comptes</span>
+          </div>
+          <div id="staffAccountsList" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 3 : GESTION DES RÉSIDENTS ENREGISTRÉS -->
+      <div id="superAdminSectionResidents" class="space-y-4 hidden">
+        <form onsubmit="handleSuperAdminAddResident(event)" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-xs">
+          <h4 class="font-bold text-slate-800 uppercase">Ajouter manuellement un résident</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Résidence</label>
+              <select id="adminNewResidentRes" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold" required></select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Bâtiment & N° Porte</label>
+              <input type="text" id="adminNewResidentDoor" placeholder="Ex: Bât A - Apt 14" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">Nom complet</label>
+            <input type="text" id="adminNewResidentName" placeholder="Ex: Sophie Martin" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5" required>
+          </div>
+          <button type="submit" class="w-full py-2 bg-teal-700 hover:bg-teal-800 text-white font-extrabold rounded-xl transition shadow-sm">
+            + Ajouter ce résident dans la base
+          </button>
+        </form>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-bold uppercase text-slate-500">Liste des Résidents (Suppression en 1 clic)</h4>
+            <span id="residentsCountBadge" class="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">0 résidents</span>
+          </div>
+          <div id="residentsListContainer" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <!-- SECTION 4 : SÉCURITÉ DU COMPTE MAÎTRE SUPER ADMIN (MODIFICATION DU MOT DE PASSE) -->
+      <div id="superAdminSectionSecurity" class="space-y-4 hidden">
+        <form onsubmit="handleUpdateSuperAdminPassword(event)" class="bg-purple-50/80 p-4 rounded-xl border border-purple-200 space-y-3.5 text-xs">
+          <div class="flex items-center space-x-2">
+            <div class="p-2 bg-purple-200/80 text-purple-900 rounded-xl">
+              <i data-lucide="key-round" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="font-extrabold text-sm text-purple-950">Sécurité du Compte Super Administrateur AddaWeb</h4>
+              <p class="text-[11px] text-purple-700">Modifiez votre mot de passe maître quand vous le souhaitez en toute sécurité.</p>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Mot de passe actuel</label>
+            <input type="password" id="currentSuperPasswordInput" placeholder="••••••••" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono" required>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Nouveau mot de passe</label>
+              <input type="password" id="newSuperPasswordInput" placeholder="Nouveau mot de passe" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono" required>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Confirmer le nouveau mot de passe</label>
+              <input type="password" id="confirmSuperPasswordInput" placeholder="Retapez le mot de passe" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 font-mono" required>
+            </div>
+          </div>
+
+          <div id="superPasswordError" class="hidden p-2 bg-rose-100 border border-rose-300 rounded-lg text-rose-800 font-bold text-center text-xs"></div>
+          <div id="superPasswordSuccess" class="hidden p-2 bg-emerald-100 border border-emerald-300 rounded-lg text-emerald-800 font-bold text-center text-xs"></div>
+
+          <button type="submit" class="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Enregistrer mon nouveau mot de passe Super Admin</span>
+          </button>
+        </form>
+
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 space-y-1">
+          <p class="font-bold text-slate-700">🔒 Règle de sécurité AddaWeb :</p>
+          <p>Une fois votre mot de passe modifié, vos identifiants sont immédiatement mis à jour sur votre appareil. Personne ne pourra accéder à votre console sans ce nouveau mot de passe.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+    <!-- MODAL DUAL AFFICHES OFFICIELLES A4 (RÉSIDENTS & GARDIENS / ZONES TECHNIQUES) -->
+  <div id="modalPoster" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-2 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-2xl rounded-3xl p-5 sm:p-6 space-y-4 max-h-[96vh] overflow-y-auto shadow-2xl border border-slate-100">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="space-y-0.5">
+          <div class="flex items-center space-x-2">
+            <h3 class="font-extrabold text-lg text-slate-900">Générateur d'Affiches Officielles A4</h3>
+            <span class="text-[10px] font-black uppercase tracking-wider bg-teal-100 text-teal-900 px-2 py-0.5 rounded-full">QR Codes Uniques</span>
+          </div>
+          <p class="text-xs text-slate-500">Imprimez l'affiche adaptée selon le lieu d'affichage et le public ciblé.</p>
+        </div>
+        <button onclick="closeModal('modalPoster')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100 transition"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <!-- SÉLECTEUR DE TYPE D'AFFICHE (RÉSIDENTS VS GARDIENS) -->
+      <div class="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl">
+        <button type="button" id="tabPosterResidentBtn" onclick="switchPosterType('resident')" class="py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 bg-white text-teal-900 shadow-sm">
+          <span>🏡 Affiche Hall (Résidents)</span>
+        </button>
+        <button type="button" id="tabPosterGardienBtn" onclick="switchPosterType('gardien')" class="py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900">
+          <span>🔑 Affiche Technique (Gardien & Prestataires)</span>
+        </button>
+      </div>
+
+      <!-- SÉLECTEURS DE DONNÉES DYNAMIQUES -->
+      <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+        <div>
+          <label class="block font-bold uppercase text-slate-500 mb-1">Résidence</label>
+          <select id="posterSelectResidence" onchange="handlePosterResidenceChange()" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500">
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold uppercase text-slate-500 mb-1">Bâtiment / Entrée</label>
+          <select id="posterSelectBuilding" onchange="updatePosterData()" class="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-teal-500">
+          </select>
+        </div>
+        <div id="posterZoneContainer" class="hidden">
+          <label class="block font-bold uppercase text-amber-700 mb-1">Local Technique</label>
+          <select id="posterSelectZone" onchange="updatePosterData()" class="w-full bg-amber-50 border border-amber-300 rounded-xl px-2.5 py-2 text-xs font-bold text-amber-900 focus:ring-2 focus:ring-amber-500">
+            <option value="Local Poubelles & Bacs">🗑️ Local Poubelles / Bacs</option>
+            <option value="Vides-ordures">♻️ Vides-ordures</option>
+            <option value="Sous-sol & Caves">📦 Sous-sol & Caves</option>
+            <option value="Chaufferie & CVC">🔥 Chaufferie & Local CVC</option>
+            <option value="Parking & Boxes">🚗 Parking & Garage</option>
+            <option value="Loge & Accueil">🔑 Loge Gardien & Régie</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ==================== APERÇU 1 : AFFICHE RÉSIDENTS (HALL) ==================== -->
+      <div id="posterTemplateResident" class="bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 max-w-xl mx-auto text-slate-800">
+        <!-- Vague Émeraude supérieure -->
+        <div class="relative bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-950 text-white p-6 sm:p-7 overflow-hidden text-center space-y-3">
+          <!-- Logo & Marque -->
+          <div class="flex items-center justify-center space-x-3">
+            <img src="icon-192.png" alt="Logo Résidéo" class="w-12 h-12 rounded-2xl shadow-md border-2 border-white/30 object-cover bg-white">
+            <span class="text-3xl sm:text-4xl font-black tracking-tight text-white font-sans">Résidéo</span>
+          </div>
+
+          <div class="space-y-1">
+            <h1 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white leading-tight">
+              UNE PANNE ?<br>UN PROBLÈME ?
+            </h1>
+            <p class="text-xl sm:text-2xl font-black text-amber-300 tracking-tight transform -rotate-1">
+              Signalez en direct !
+            </p>
+          </div>
+
+          <p class="text-xs font-medium text-teal-100 max-w-md mx-auto leading-snug">
+            Scannez le QR Code pour accéder à vos services de résidence !
+          </p>
+        </div>
+
+        <!-- Corps central : 3 étapes + QR Code -->
+        <div class="p-6 sm:p-7 space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+            
+            <!-- Colonne 3 étapes -->
+            <div class="sm:col-span-6 space-y-4 text-left">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  📱
+                </div>
+                <div>
+                  <h4 class="font-black text-slate-900 text-sm leading-tight">1. Scanner</h4>
+                  <p class="text-[11px] text-slate-500">Avec l'appareil photo du smartphone.</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  👤
+                </div>
+                <div>
+                  <h4 class="font-black text-slate-900 text-sm leading-tight">2. S'inscrire</h4>
+                  <p class="text-[11px] text-slate-500">Nom, e-mail et numéro de porte.</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  ⚡
+                </div>
+                <div>
+                  <h4 class="font-black text-slate-900 text-sm leading-tight">3. Signaler</h4>
+                  <p class="text-[11px] text-slate-500">En quelques clics sans intermédiaire.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne Boîtier QR Code avec pointeur -->
+            <div class="sm:col-span-6 flex flex-col items-center justify-center text-center">
+              <div class="p-3 bg-teal-600 rounded-3xl shadow-lg border-2 border-teal-500/40 w-full max-w-[210px]">
+                <div class="p-2 bg-white rounded-2xl flex items-center justify-center">
+                  <div id="dynamicQrCodeResident" class="p-1"></div>
+                </div>
+                <!-- Cartouche blanc inférieur à pointe indicatrice -->
+                <div class="mt-2.5 bg-white rounded-2xl py-2 px-3 text-center shadow-xs">
+                  <span class="text-[9px] font-bold uppercase text-slate-400 block tracking-wider">Votre résidence :</span>
+                  <span id="posterResidentResName" class="font-black text-xs text-slate-900 block truncate">Résidence Les Oliviers</span>
+                  <span id="posterResidentCodeBadge" class="text-teal-700 text-[10px] font-extrabold block">Bâtiment A — Code : OLIV-A</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bénéfices réajustés : RAPIDE, SUIVI, ASTREINTES (Colis retiré pour universalité) -->
+          <div class="pt-4 border-t border-slate-200 grid grid-cols-3 gap-3 text-center">
+            <div class="space-y-1">
+              <div class="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-base">⏱️</div>
+              <h5 class="font-black text-slate-900 text-xs uppercase">RAPIDE</h5>
+              <p class="text-[10px] text-slate-500 leading-tight">Signalez un problème en quelques secondes.</p>
+            </div>
+            <div class="space-y-1">
+              <div class="w-9 h-9 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto text-base">🔔</div>
+              <h5 class="font-black text-slate-900 text-xs uppercase">SUIVI EN DIRECT</h5>
+              <p class="text-[10px] text-slate-500 leading-tight">Suivez l'avancée et la venue de l'artisan.</p>
+            </div>
+            <div class="space-y-1">
+              <div class="w-9 h-9 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center mx-auto text-base">📞</div>
+              <h5 class="font-black text-slate-900 text-xs uppercase">ASTREINTES</h5>
+              <p class="text-[10px] text-slate-500 leading-tight">Accès direct aux numéros d'urgence 24/7.</p>
+            </div>
+          </div>
+
+          <!-- ENCADRÉ OFFICIEL INSTALLATION MOBILE (IPHONE & ANDROID) -->
+          <div class="mt-4 p-4 bg-teal-50/90 border-2 border-teal-300 rounded-2xl text-left space-y-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-base">📲</span>
+              <h5 class="font-black text-xs uppercase tracking-tight text-teal-950">Comment installer l'application sur votre écran d'accueil :</h5>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] leading-snug">
+              <div class="p-2.5 bg-white border border-teal-200 rounded-xl space-y-1 shadow-xs">
+                <span class="font-extrabold text-slate-900 flex items-center space-x-1">
+                  <span>🍎 Sur iPhone (Safari) :</span>
+                </span>
+                <p class="text-slate-600">
+                  Touchez l'icône de partage <strong>⎋</strong> (carré avec flèche en bas) puis faites défiler et choisissez <strong>« Sur l'écran d'accueil » ⊞</strong>.
+                </p>
+              </div>
+              <div class="p-2.5 bg-white border border-teal-200 rounded-xl space-y-1 shadow-xs">
+                <span class="font-extrabold text-slate-900 flex items-center space-x-1">
+                  <span>🤖 Sur Android (Chrome) :</span>
+                </span>
+                <p class="text-slate-600">
+                  Touchez les <strong>3 points ⋮</strong> en haut à droite puis appuyez sur <strong>« Installer l'application »</strong> (ou validez le bandeau en bas).
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pied de page certifié -->
+        <div class="bg-teal-950 text-white px-6 py-2.5 flex items-center justify-between text-[11px] font-semibold">
+          <span>Une application certifiée Résidéo • Développé par <strong>AddaWeb</strong></span>
+          <span class="text-teal-300 font-mono text-[10px]">📱 Web Mobile</span>
+        </div>
+      </div>
+
+      <!-- ==================== APERÇU 2 : AFFICHE TECHNIQUE & GARDIENS (CAVES, BACS, CHAUFFERIE) ==================== -->
+      <div id="posterTemplateGardien" class="bg-slate-950 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 max-w-xl mx-auto text-white hidden">
+        <!-- Bandeau d'en-tête Technique / Pro -->
+        <div class="bg-gradient-to-r from-slate-900 via-amber-950/70 to-slate-900 p-6 sm:p-7 border-b border-amber-500/30 text-center space-y-3">
+          <div class="flex items-center justify-center space-x-3">
+            <div class="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-400 font-black text-xl">
+              🛡️
+            </div>
+            <div class="text-left">
+              <h4 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center space-x-2">
+                <span>Résidéo Maintenance</span>
+                <span class="text-[9px] bg-amber-500/30 text-amber-300 border border-amber-500/50 px-2 py-0.5 rounded-full uppercase">Staff & Gardiens</span>
+              </h4>
+              <p class="text-[11px] text-slate-400">Registre réglementaire, émargement des rondes & passages techniques</p>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-900/90 rounded-2xl border border-amber-500/30 text-center">
+            <span class="text-[10px] font-black uppercase text-amber-400 tracking-wider block">ZONE D'INTERVENTION CONCERNÉE</span>
+            <span id="posterGardienZoneDisplay" class="text-base sm:text-lg font-black text-white block mt-0.5">🗑️ Local Poubelles & Bacs</span>
+            <span id="posterGardienBuildingBadge" class="text-xs text-slate-400 font-semibold block">Résidence Les Oliviers • Bâtiment A</span>
+          </div>
+        </div>
+
+        <!-- Corps central : Émargement rapide + QR Code Pro -->
+        <div class="p-6 sm:p-7 space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+            
+            <!-- Colonne 3 actions Gardien / Entreprise -->
+            <div class="sm:col-span-6 space-y-4 text-left">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  ⚡
+                </div>
+                <div>
+                  <h4 class="font-black text-white text-sm leading-tight">1. Scanner le QR Code</h4>
+                  <p class="text-[11px] text-slate-400">Accès direct au registre de la zone sans mot de passe complexe.</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  🧹
+                </div>
+                <div>
+                  <h4 class="font-black text-white text-sm leading-tight">2. Émarger le passage</h4>
+                  <p class="text-[11px] text-slate-400">Validation horodatée du nettoyage ou de la ronde en 1 clic.</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-400 flex items-center justify-center font-black text-base shadow-xs flex-shrink-0">
+                  ⚠️
+                </div>
+                <div>
+                  <h4 class="font-black text-white text-sm leading-tight">3. Noter une dégradation</h4>
+                  <p class="text-[11px] text-slate-400">Signalement prioritaire transmis en direct au syndic / bailleur.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Colonne Boîtier QR Code Spécial Gardien -->
+            <div class="sm:col-span-6 flex flex-col items-center justify-center text-center">
+              <div class="p-3 bg-amber-600 rounded-3xl shadow-xl border-2 border-amber-400/50 w-full max-w-[210px]">
+                <div class="p-2 bg-white rounded-2xl flex items-center justify-center">
+                  <div id="dynamicQrCodeGardien" class="p-1"></div>
+                </div>
+                <div class="mt-2.5 bg-slate-900 rounded-2xl py-2 px-3 text-center border border-amber-500/40">
+                  <span class="text-[9px] font-bold uppercase text-amber-400 block tracking-wider">BORNE DE TRAÇABILITÉ</span>
+                  <span id="posterGardienResName" class="font-black text-xs text-white block truncate">Les Oliviers</span>
+                  <span id="posterGardienCodeBadge" class="text-amber-300 text-[10px] font-mono block">BAT-A-PRO</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 3 Engagements Sécurité & Maintenance -->
+          <div class="pt-4 border-t border-slate-800 grid grid-cols-3 gap-3 text-center text-xs">
+            <div class="p-2 bg-slate-900 rounded-2xl border border-slate-800">
+              <span class="block text-base mb-1">📋</span>
+              <span class="font-black text-white block text-[11px]">CONFORME AG</span>
+              <span class="text-[10px] text-slate-400">Historique des rondes et propreté certifié.</span>
+            </div>
+            <div class="p-2 bg-slate-900 rounded-2xl border border-slate-800">
+              <span class="block text-base mb-1">⏱️</span>
+              <span class="font-black text-white block text-[11px]">HORODATÉ</span>
+              <span class="text-[10px] text-slate-400">Preuve de passage en temps réel.</span>
+            </div>
+            <div class="p-2 bg-slate-900 rounded-2xl border border-slate-800">
+              <span class="block text-base mb-1">🔒</span>
+              <span class="font-black text-white block text-[11px]">SÉCURISÉ</span>
+              <span class="text-[10px] text-slate-400">Réservé au staff, gardiens et prestataires.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pied de page Technique -->
+        <div class="bg-black text-slate-400 px-6 py-2.5 flex items-center justify-between text-[11px] font-semibold border-t border-slate-800">
+          <span>Accès technique Résidéo • Supervision par <strong>AddaWeb</strong></span>
+          <span class="text-amber-400 font-mono text-[10px]">⚙️ Console Staff</span>
+        </div>
+      </div>
+
+      <!-- BOUTONS D'ACTION ET IMPRESSION -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+        <span id="posterStatusIndicator" class="text-xs text-slate-500 font-medium">
+          Affiche sélectionnée : <strong class="text-teal-700">Hall d'entrée (Résidents)</strong>
+        </span>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeModal('modalPoster')" class="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition">Fermer</button>
+          <button onclick="triggerCleanPosterPrint()" class="px-5 py-2 text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-md transition flex items-center space-x-1.5">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span id="btnPrintPosterLabel">Imprimer cette Affiche A4</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- MODAL ASTREINTES -->
+  <div id="modalDocuments" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] hidden flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4 shadow-2xl flex flex-col" style="-webkit-overflow-scrolling: touch; overscroll-behavior: contain;">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 flex-shrink-0">
+        <div>
+          <h3 class="font-extrabold text-lg text-slate-900 flex items-center space-x-2">
+            <i data-lucide="phone-call" class="w-5 h-5 text-teal-600"></i>
+            <span>Astreintes & Urgences 24/7</span>
+          </h3>
+          <p class="text-xs text-slate-500 truncate max-w-[260px]" id="emergencyModalSubTitle">Numéros d'astreinte officiels de votre résidence</p>
+        </div>
+        <button onclick="closeModal('modalDocuments')" class="p-2 rounded-full text-slate-400 hover:bg-slate-100 bg-slate-50 border border-slate-200"><i data-lucide="x" class="w-6 h-6 text-slate-700"></i></button>
+      </div>
+
+      <!-- BOUTON & FORMULAIRE BAILLEUR / GESTIONNAIRE : AJOUTER UNE SOCIÉTÉ D'ASTREINTE -->
+      <div id="bailleurAddContractorBox" class="hidden flex-shrink-0">
+        <button type="button" onclick="toggleAddContractorForm()" class="w-full py-2 px-3 bg-teal-50 hover:bg-teal-100 border border-teal-300 text-teal-900 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-teal-600"></i>
+          <span id="btnToggleContractorFormText">+ Ajouter un prestataire d'astreinte pour cet immeuble</span>
+        </button>
+
+        <form id="formAddContractor" onsubmit="handleAddNewContractor(event)" class="hidden mt-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-1.5">
+            <span class="font-bold text-slate-900 uppercase text-[10px] tracking-wider">🏢 Nouveau Prestataire sous contrat</span>
+            <span class="text-[10px] text-teal-700 font-bold bg-teal-100 px-1.5 py-0.5 rounded">Astreinte Immeuble</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-slate-600 mb-0.5">Corps d'état / Métier</label>
+              <select id="newContractorTrade" onchange="handleContractorTradeChange(this.value)" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 font-bold text-slate-800" required>
+                <option value="🛗 Ascenseur Dépannage 24/7">🛗 Ascenseur</option>
+                <option value="💧 Fuite d'eau & Plomberie">💧 Plomberie / Fuite</option>
+                <option value="🔥 Chauffage & Chaudière">🔥 Chauffage / CVC</option>
+                <option value="🚪 Serrurerie & Portes">🚪 Serrurerie</option>
+                <option value="⚡ Électricité Bâtiment">⚡ Électricité</option>
+                <option value="🚗 Porte Parking & Portail">🚗 Porte Parking / Automatisme</option>
+                <option value="🧹 Propreté & Nettoyage">🧹 Entreprise de nettoyage</option>
+                <option value="🛡️ Sécurité & Gardiennage">🛡️ Sécurité / Ronde</option>
+                <option value="🚽 Débouchage & Assainissement">🚽 Débouchage Canalisations</option>
+                <option value="🔧 Maintenance Générale">🔧 Prestataire Multi-services</option>
+                <option value="custom">✏️ Autre métier (saisie libre au choix)...</option>
+              </select>
+              <div id="customTradeInputContainer" class="hidden mt-1.5">
+                <input type="text" id="newContractorCustomTrade" placeholder="Tapez votre métier (Ex: VMC, Interphonie, Vitrerie, Toiture...)" class="w-full bg-teal-50/70 border border-teal-300 rounded-lg px-2.5 py-1.5 text-slate-800 font-bold text-xs placeholder:font-normal">
+              </div>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-0.5">Nom de l'entreprise</label>
+              <input type="text" id="newContractorCompany" placeholder="Ex: Schindler, ProTech Plomberie..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-semibold" required>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+            <div>
+              <label class="block font-bold text-slate-600 mb-0.5">Numéro de téléphone d'urgence</label>
+              <input type="tel" id="newContractorPhone" placeholder="Ex: 01 40 00 00 00 ou 0800..." class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 font-mono" required>
+            </div>
+            <div class="pt-3 sm:pt-4">
+              <label class="flex items-center space-x-2 cursor-pointer select-none">
+                <input type="checkbox" id="newContractorUrgent" class="rounded text-rose-600 focus:ring-rose-500 w-4 h-4" checked>
+                <span class="text-xs font-bold text-slate-700">🚨 Urgence 24/7 prioritaire (en rouge)</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2 pt-1">
+            <button type="button" onclick="toggleAddContractorForm(false)" class="flex-1 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition text-center">Annuler</button>
+            <button type="submit" class="flex-2 py-1.5 px-4 bg-teal-600 hover:bg-teal-700 text-white font-black rounded-xl shadow-xs transition text-center">+ Enregistrer ce prestataire</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Liste des contacts d'urgence avec défilement tactile fluide et marge basse pour ne pas être caché -->
+      <div id="emergencyContactsList" class="space-y-2.5 pb-24 overflow-y-auto" style="-webkit-overflow-scrolling: touch;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL CRÉATION INCIDENT -->
+  <div id="modalCreateIncident" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-lg text-slate-900">Signaler un incident</h3>
+        <button onclick="closeModal('modalCreateIncident')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <form id="formNewIncident" onsubmit="handleCreateIncident(event)" class="space-y-3.5">
+        <!-- Sélecteur Commun vs Privatif -->
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Emplacement de la panne</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center space-x-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+              <input type="radio" name="incScopeRadio" value="commun" checked onchange="toggleScopeHelp('commun')" class="text-teal-600 focus:ring-teal-500">
+              <div class="text-left">
+                <span class="block font-bold text-xs text-slate-900">🏢 Parties Communes</span>
+                <span class="block text-[10px] text-slate-500">Hall, ascenseur, parking...</span>
+              </div>
+            </label>
+            <label class="flex items-center space-x-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 transition">
+              <input type="radio" name="incScopeRadio" value="privatif" onchange="toggleScopeHelp('privatif')" class="text-teal-600 focus:ring-teal-500">
+              <div class="text-left">
+                <span class="block font-bold text-xs text-slate-900">🚪 Mon Logement (Privé)</span>
+                <span class="block text-[10px] text-slate-500">Fuite, volet, radiateur...</span>
+              </div>
+            </label>
+          </div>
+          <p id="scopeHelpText" class="text-[10px] text-slate-500 mt-1 italic">
+            ℹ️ Signalement public : Visible par les résidents du bâtiment (votre nom sera anonymisé : Prénom + Initiale).
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Bâtiment concerné</label>
+          <select id="incBuildingSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800" required>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Catégorie</label>
+          <select id="incCategory" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-800" required>
+            <option value="ascenseur">🛗 Ascenseur / Monte-charge</option>
+            <option value="porte_portail">🚪 Porte, Portail ou Interphone</option>
+            <option value="plomberie">💧 Plomberie / Fuite d'eau</option>
+            <option value="electricite">⚡ Électricité / Éclairage</option>
+            <option value="proprete">🧹 Propreté / Encombrants</option>
+            <option value="autre">Autre problème technique</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Titre de la panne</label>
+          <input type="text" id="incTitle" placeholder="Ex: Ascenseur bloqué au 2ème étage" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Précisions</label>
+          <textarea id="incDescription" rows="2" placeholder="Bruit suspect, fuite abondante, étage..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800"></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-md transition">
+          Valider et transmettre
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL ÉMARGEMENT PROPRETÉ -->
+  <div id="modalCleaningLog" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+          <i data-lucide="sparkles" class="w-5 h-5 text-teal-600"></i>
+          <span>Émargement Passage Propreté</span>
+        </h3>
+        <button onclick="closeModal('modalCleaningLog')" class="p-1 text-slate-400 hover:bg-slate-100 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form onsubmit="handleCleaningLogSubmit(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Intervenant / Gardien</label>
+          <input type="text" id="cleanerCompany" placeholder="Ex: Jean (Gardien Loge RDC)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800" required>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Zones traitées</label>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer">
+              <input type="checkbox" name="cleanZone" value="Hall & Entrée" checked class="text-teal-600">
+              <span class="font-medium">Hall & Entrée</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer">
+              <input type="checkbox" name="cleanZone" value="Local Poubelles" checked class="text-teal-600">
+              <span class="font-medium">Bacs / Poubelles</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer">
+              <input type="checkbox" name="cleanZone" value="Ascenseur" class="text-teal-600">
+              <span class="font-medium">Ascenseur</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 border border-slate-200 rounded-lg cursor-pointer">
+              <input type="checkbox" name="cleanZone" value="Escaliers" class="text-teal-600">
+              <span class="font-medium">Escaliers</span>
+            </label>
+          </div>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md transition">
+          ✓ Valider le passage (Horodaté)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL OBJETS TROUVÉS -->
+  <div id="modalLostFound" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-base sm:text-lg text-slate-900">📦 Objets Trouvés & Colis en Loge</h3>
+        <button onclick="closeModal('modalLostFound')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <form onsubmit="handleCreateLostFound(event)" class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Type</label>
+            <select id="lfType" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-800">
+              <option value="colis">📦 Colis / Livraison</option>
+              <option value="clefs">🔑 Clés / Bip de garage</option>
+              <option value="autre">🏷️ Autre objet</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Emplacement</label>
+            <input type="text" id="lfLocation" placeholder="Ex: Loge RDC" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-800" required>
+          </div>
+        </div>
+        <div>
+          <input type="text" id="lfTitle" placeholder="Ex: Paquet Amazon / Trousseau 3 clés" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800" required>
+        </div>
+        <button type="submit" class="w-full py-2 bg-slate-900 text-white font-extrabold text-xs rounded-xl shadow-sm transition">+ Enregistrer</button>
+      </form>
+      <div id="lostFoundList" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- MODAL REGISTRE SÉCURITÉ -->
+  <div id="modalRegulatoryInspection" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-5 sm:p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-base text-slate-900">🛡️ Registre des Visites Réglementaires</h3>
+        <button onclick="closeModal('modalRegulatoryInspection')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <form onsubmit="handleInspectionSubmit(event)" class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Équipement</label>
+            <select id="inspType" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 font-semibold text-slate-800">
+              <option value="Ascenseur (Contrôle 6 semaines)">🛗 Ascenseur (6 semaines)</option>
+              <option value="Porte Automatique Parking (Semestriel)">🚪 Porte Parking (Semestriel)</option>
+              <option value="Sécurité Incendie / Extincteurs (Annuel)">🧯 Sécurité Incendie (Annuel)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Société / Technicien</label>
+            <input type="text" id="inspCompany" placeholder="Ex: Otis (M. Dupont)" class="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-slate-800" required>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition">
+          ✓ Enregistrer la visite dans le registre légal
+        </button>
+      </form>
+      <div id="inspectionsHistoryList" class="space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- MODAL PUBLICATION HALL -->
+  <div id="modalCreateAnnouncement" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 no-print">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-lg text-slate-900">Publier un avis de Hall</h3>
+        <button onclick="closeModal('modalCreateAnnouncement')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <form id="formAnnouncement" onsubmit="handleCreateAnnouncement(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Titre de l'avis</label>
+          <input type="text" id="annTitle" placeholder="Ex: Coupure d'eau programmée jeudi" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800" required>
+        </div>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Consignes aux résidents</label>
+          <textarea id="annContent" rows="3" placeholder="Description de l'intervention..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-800" required></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-xl text-xs sm:text-sm shadow-md transition">
+          Diffuser sur le panneau officiel
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL OBLIGATOIRE : PREMIÈRE CONNEXION & MOT DE PASSE PERSONNEL ==================== -->
+  <div id="modalForcePasswordChange" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-100 text-left">
+      <div class="text-center space-y-1.5">
+        <div class="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center mx-auto text-teal-700">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <h3 class="font-extrabold text-lg text-slate-900">Sécurisation de votre accès</h3>
+        <p class="text-xs text-slate-500">Validation obligatoire du mot de passe personnel</p>
+      </div>
+
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed">
+        🔒 <strong>Mesure de sécurité :</strong> Veuillez entrer le mot de passe provisoire fourni par votre administration, puis choisir votre mot de passe personnel secret.
+      </div>
+
+      <form onsubmit="handleForcePasswordChangeSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mot de passe temporaire actuel</label>
+          <input type="password" id="forceCurrentTempPassword" placeholder="Code temporaire reçu" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-mono focus:ring-2 focus:ring-teal-500" required>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Votre nouveau mot de passe privé</label>
+          <input type="password" id="forceNewPassword" placeholder="Minimum 4 caractères" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-mono focus:ring-2 focus:ring-teal-500" required>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Confirmation du nouveau mot de passe</label>
+          <input type="password" id="forceConfirmPassword" placeholder="Confirmez le mot de passe" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-mono focus:ring-2 focus:ring-teal-500" required>
+        </div>
+
+        <div id="forcePasswordError" class="hidden p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-bold text-center text-xs"></div>
+
+        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span>Enregistrer mon mot de passe privé</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL : MODIFIER MON MOT DE PASSE PERSONNEL ==================== -->
+  <div id="modalPersonalPassword" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 no-print">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 sm:p-6 space-y-4 shadow-xl text-left">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-extrabold text-base text-slate-900 flex items-center space-x-2">
+          <i data-lucide="key" class="w-5 h-5 text-teal-600"></i>
+          <span>Changer mon mot de passe</span>
+        </h3>
+        <button onclick="closeModal('modalPersonalPassword')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handlePersonalPasswordUpdate(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Mot de passe actuel</label>
+          <input type="password" id="personalCurrentPassword" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono" required>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Nouveau mot de passe</label>
+            <input type="password" id="personalNewPassword" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono" required>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Confirmation</label>
+            <input type="password" id="personalConfirmPassword" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-mono" required>
+          </div>
+        </div>
+
+        <div id="personalPasswordError" class="hidden p-2 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-bold text-center text-xs"></div>
+
+        <button type="submit" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl transition">
+          Mettre à jour mon mot de passe
+        </button>
+      </form>
+    </div>
+  </div>
+
+  
+  <!-- ==================== MODAL MOT DE PASSE OUBLIÉ (TOUS LES UTILISATEURS) ==================== -->
+  <div id="modalForgotPassword" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-100 text-left">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-700">
+            <i data-lucide="key-round" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900">Mot de passe oublié</h3>
+            <p class="text-[11px] text-slate-500 font-medium">Réinitialisation par e-mail officiel</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeModal('modalForgotPassword')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="p-3 bg-teal-50 border border-teal-200 rounded-2xl text-xs text-teal-900 leading-relaxed">
+        🔒 <strong>Accessible à tous :</strong> Résidents, Gardiens, Syndics, Bailleurs et Administrateurs.<br>
+        Saisissez votre e-mail de connexion. Un lien officiel Firebase vous sera immédiatement expédié pour choisir un nouveau mot de passe.
+      </div>
+
+      <form id="formForgotPassword" onsubmit="handleRequestPasswordReset(event)" class="space-y-3.5 text-xs">
+        <div>
+          <label class="block font-bold uppercase text-slate-500 mb-1">Votre adresse e-mail</label>
+          <input type="email" id="forgotEmailInput" placeholder="nom@domaine.fr" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-medium focus:ring-2 focus:ring-teal-500" required>
+        </div>
+
+        <div id="forgotStatusMessage" class="hidden p-3 rounded-xl text-xs font-bold text-center"></div>
+
+        <button type="submit" id="btnSubmitForgot" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="send" class="w-4 h-4 text-teal-400"></i>
+          <span>M'envoyer le lien de réinitialisation</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  
+  <!-- ==================== MODAL MANDATER UN ARTISAN ==================== -->
+  <div id="modalMandateContractor" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 no-print overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <h3 class="font-extrabold text-base text-slate-900 flex items-center space-x-1.5">
+            <i data-lucide="wrench" class="w-5 h-5 text-teal-600"></i>
+            <span>Mandater une intervention</span>
+          </h3>
+          <p id="mandateIncidentTitle" class="text-xs text-slate-500 font-medium truncate mt-0.5">Incident</p>
+        </div>
+        <button onclick="closeModal('modalMandateContractor')" class="p-1 rounded-full text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-6 h-6"></i></button>
+      </div>
+
+      <form onsubmit="handleConfirmMandate(event)" class="space-y-3.5 text-xs">
+        <input type="hidden" id="mandateIncidentId">
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Entreprise / Artisan à mandater</label>
+          <input type="text" id="mandateContractorName" placeholder="Ex: OTIS Ascenseurs, Dépannage Plomberie..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800" required>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Date d'intervention programmée</label>
+          <input type="date" id="mandateInterventionDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800" required>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Consignes pour l'artisan / Résidents</label>
+          <textarea id="mandateInstructions" rows="2" placeholder="Ex: Accès par la loge ou le hall. Intervention en matinée." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800"></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          <span>Valider le mandatement et notifier</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGIQUE APPLICATIVE -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => {}); });
+    }
+
+    // Versioning pour réinitialiser les sessions de tests antérieures et forcer l'affichage de l'écran de connexion propre
+    const CURRENT_DEPLOY_BUILD = "resideo_prod_v10_firebase";
+
+    // =========================================================================
+    // CONFIGURATION OFFICIELLE FIREBASE (AUTHENTIFICATION & SYNCHRONISATION)
+    // Remplacez les valeurs ci-dessous par celles de votre console Firebase
+    // =========================================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDo7JKOsmaih0O4ZE_9Wo6_CKKLxlzyDag",
+      authDomain: "mon-app-resideo.firebaseapp.com",
+      projectId: "mon-app-resideo",
+      storageBucket: "mon-app-resideo.firebasestorage.app",
+      messagingSenderId: "840225851026",
+      appId: "1:840225851026:web:d5f71652df4730da34484b",
+      measurementId: "G-5G26N3295W"
+    };
+
+    let firebaseApp = null;
+    let firebaseAuth = null;
+    let firebaseDb = null;
+    let isFirebaseActive = false;
+
+    try {
+      if (typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey !== "VOTRE_API_KEY") {
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        firebaseAuth = firebase.auth();
+        firebaseDb = firebase.firestore();
+        isFirebaseActive = true;
+        console.log("✓ Firebase Connecté avec succès pour Résidéo (AddaWeb).");
+      } else {
+        console.info("ℹ️ Mode Local / En attente des clés réelles Firebase Config.");
+      }
+    } catch (e) {
+      console.warn("Firebase non initialisé :", e);
+    }
+
+    // GESTION DU MOT DE PASSE OUBLIÉ (ENVOI D'E-MAIL PAR FIREBASE)
+    async function handleRequestPasswordReset(e) {
+      e.preventDefault();
+      const email = document.getElementById("forgotEmailInput").value.trim().toLowerCase();
+      const statusBox = document.getElementById("forgotStatusMessage");
+      const btn = document.getElementById("btnSubmitForgot");
+
+      statusBox.classList.add("hidden");
+      btn.disabled = true;
+      btn.innerText = "⏳ Envoi en cours...";
+
+      if (isFirebaseActive && firebaseAuth) {
+        try {
+          await firebaseAuth.sendPasswordResetEmail(email);
+          statusBox.className = "p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold text-center";
+          statusBox.innerText = `✓ E-mail envoyé avec succès à ${email} !
+Consultez votre boîte de réception (et vos spams) pour réinitialiser votre mot de passe.`;
+          statusBox.classList.remove("hidden");
+          setTimeout(() => { closeModal("modalForgotPassword"); }, 4000);
+        } catch (error) {
+          statusBox.className = "p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold text-center";
+          let msg = "Erreur lors de l'envoi de l'e-mail.";
+          if (error.code === 'auth/user-not-found') msg = "❌ Aucun compte Résidéo n'est enregistré avec cette adresse e-mail.";
+          if (error.code === 'auth/invalid-email') msg = "❌ Adresse e-mail invalide.";
+          statusBox.innerText = msg;
+          statusBox.classList.remove("hidden");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = `<i data-lucide="send" class="w-4 h-4 text-teal-400"></i><span>M'envoyer le lien de réinitialisation</span>`;
+          lucide.createIcons();
+        }
+      } else {
+        // Mode de transition immédiate (avant renseignement des clés Firebase)
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = `<i data-lucide="send" class="w-4 h-4 text-teal-400"></i><span>M'envoyer le lien de réinitialisation</span>`;
+          lucide.createIcons();
+          statusBox.className = "p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold text-center";
+          statusBox.innerText = `✓ Demande validée pour ${email} !
+(Dès que vous collez vos clés Firebase dans index.html, le mail officiel partira automatiquement).`;
+          statusBox.classList.remove("hidden");
+        }, 800);
+      }
+    }
+
+    if (localStorage.getItem('resideo_app_build') !== CURRENT_DEPLOY_BUILD) {
+      localStorage.removeItem('resideo_user');
+      localStorage.setItem('resideo_app_build', CURRENT_DEPLOY_BUILD);
+    }
+
+    // ==================== BASE DE DONNÉES LOCALE ====================
+    let defaultResidences = [
+      { 
+        id: "res_oliviers", 
+        name: "Résidence Les Oliviers", 
+        code: "OLIV", 
+        buildings: ["A", "B", "C"],
+        contractors: [
+          { trade: "Ascenseurs", company: "OTIS Dépannage 24/7", phone: "0800 12 34 56" }
+        ]
+      }
+    ];
+
+    let residencesData = JSON.parse(localStorage.getItem('resideo_residences')) || defaultResidences;
+
+    // Seul le compte Super Admin AddaWeb existe par défaut
+    let defaultStaffAccounts = [
+      { id: "usr_superadmin", email: "contact@addaweb.fr", password: "addaweb2026", role: "superadmin", name: "AddaWeb", residenceId: "all" },
+      { id: "usr_superadmin2", email: "addaoudijamel@hotmail.fr", password: "addaweb2026", role: "superadmin", name: "AddaWeb (Super Admin)", residenceId: "all" }
+    ];
+
+    let staffAccounts = JSON.parse(localStorage.getItem('resideo_staff_accounts')) || defaultStaffAccounts;
+    let registeredResidents = JSON.parse(localStorage.getItem('resideo_residents_list')) || [];
+
+    // Session active (strictement null par défaut pour afficher l'écran de connexion au démarrage)
+    let currentSessionUser = JSON.parse(localStorage.getItem('resideo_user')) || null;
+    let activeResidence = residencesData[0] || { id: "res_none", name: "Aucune résidence configurée", code: "NONE", buildings: ["A"] };
+    let currentFilter = 'all';
+
+    let incidents = JSON.parse(localStorage.getItem('resideo_incidents')) || [];
+    let announcements = JSON.parse(localStorage.getItem('resideo_announcements')) || [];
+    let lostFoundItems = JSON.parse(localStorage.getItem('resideo_lost_found')) || [];
+    let regulatoryInspections = JSON.parse(localStorage.getItem('resideo_inspections')) || [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      populateAllResidenceSelects();
+      checkAuthStatus();
+      handleUrlParams();
+      checkForcePasswordChange();
+    });
+
+    // ==================== BASCULE DES ONGLETS D'ACCÈS ====================
+    function switchAuthPortal(portal) {
+      const btnLog = document.getElementById("tabBtnLogin");
+      const btnReg = document.getElementById("tabBtnRegister");
+      const formLog = document.getElementById("formLogin");
+      const formReg = document.getElementById("formRegisterResident");
+
+      if (portal === 'login') {
+        btnLog.className = "py-2.5 text-xs font-black rounded-xl transition shadow-sm bg-white text-slate-900";
+        btnReg.className = "py-2.5 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-900";
+        formLog.classList.remove("hidden");
+        formReg.classList.add("hidden");
+      } else {
+        btnReg.className = "py-2.5 text-xs font-black rounded-xl transition shadow-sm bg-white text-teal-800";
+        btnLog.className = "py-2.5 text-xs font-bold rounded-xl transition text-slate-500 hover:text-slate-900";
+        formReg.classList.remove("hidden");
+        formLog.classList.add("hidden");
+      }
+    }
+
+    // GÉOLOCALISATION DU RÉSIDENT
+    function detectUserLocation() {
+      const geoBtn = document.getElementById("geoBtnText");
+      const geoDetect = document.getElementById("geoDetectedText");
+
+      if (!navigator.geolocation) {
+        alert("La géolocalisation n'est pas supportée par votre navigateur.");
+        return;
+      }
+
+      geoBtn.innerText = "⏳ Recherche de votre position GPS...";
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          geoBtn.innerText = "✓ Adresse détectée par GPS !";
+          geoDetect.innerText = `📍 Position validée (${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}) : Rattaché à votre résidence la plus proche.`;
+          geoDetect.classList.remove("hidden");
+          if (residencesData.length > 0) {
+            document.getElementById("regResidenceSelect").value = residencesData[0].id;
+          }
+        },
+        (err) => {
+          geoBtn.innerText = "📍 Sélectionner manuellement mon immeuble";
+          geoDetect.innerText = "ℹ️ Position non accessible : veuillez sélectionner votre résidence dans la liste.";
+          geoDetect.classList.remove("hidden");
+        },
+        { timeout: 8000 }
+      );
+    }
+
+    // ==================== AUTHENTIFICATION SÉCURISÉE ====================
+    function checkAuthStatus() {
+      const authScreen = document.getElementById("authScreen");
+      const appContainer = document.getElementById("appContainer");
+
+      if (!currentSessionUser) {
+        authScreen.classList.remove("hidden");
+        appContainer.classList.add("hidden");
+      } else {
+        authScreen.classList.add("hidden");
+        appContainer.classList.remove("hidden");
+        setupUserInterface();
+      }
+    }
+
+    function handleAuthLogin(e) {
+      e.preventDefault();
+      const identifier = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("loginPassword").value.trim();
+      const err = document.getElementById("loginError");
+
+      // 1. Super Admin Maître AddaWeb (Mot de passe dynamique et modifiable)
+      const isSuper = (identifier === 'contact@addaweb.fr' || identifier === 'addaoudijamel@hotmail.fr' || identifier === 'admin');
+      const superMasterPass = getSuperAdminMasterPassword();
+      if (isSuper && pass === superMasterPass) {
+        currentSessionUser = {
+          name: "AddaWeb",
+          email: identifier,
+          role: "superadmin",
+          residenceId: residencesData.length ? residencesData[0].id : "all"
+        };
+        activeResidence = residencesData.length ? residencesData[0] : { id: "res_none", name: "Aucune résidence configurée", code: "NONE", buildings: ["A"] };
+        localStorage.setItem('resideo_user', JSON.stringify(currentSessionUser));
+        checkAuthStatus();
+      handleUrlParams();
+        return;
+      }
+
+      // 2. Recherche parmi le staff pro (Bailleurs, Responsables de loge, Gardiens)
+      const staffMember = staffAccounts.find(u => u.email.toLowerCase() === identifier && u.password === pass);
+      if (staffMember) {
+        err.classList.add("hidden");
+        const userRes = residencesData.find(r => r.id === staffMember.residenceId) || residencesData[0];
+        activeResidence = userRes;
+
+        currentSessionUser = {
+          name: staffMember.name,
+          email: staffMember.email,
+          role: staffMember.role,
+          residenceId: staffMember.residenceId,
+          building: staffMember.building || "",
+          mustChangePassword: !!staffMember.mustChangePassword
+        };
+
+        localStorage.setItem('resideo_user', JSON.stringify(currentSessionUser));
+        checkAuthStatus();
+      handleUrlParams();
+        checkForcePasswordChange();
+        return;
+      }
+
+      // 3. Recherche parmi les résidents inscrits
+      const residentMember = registeredResidents.find(r => r.email.toLowerCase() === identifier && r.password === pass);
+      if (residentMember) {
+        err.classList.add("hidden");
+        const resObj = residencesData.find(r => r.id === residentMember.residenceId) || residencesData[0];
+        activeResidence = resObj;
+
+        currentSessionUser = {
+          name: residentMember.name,
+          email: residentMember.email,
+          role: "resident",
+          residenceId: residentMember.residenceId,
+          building: residentMember.building,
+          door: residentMember.door,
+          floor: residentMember.floor
+        };
+
+        localStorage.setItem('resideo_user', JSON.stringify(currentSessionUser));
+        checkAuthStatus();
+      handleUrlParams();
+        return;
+      }
+
+      err.innerText = "❌ E-mail ou mot de passe incorrect. Vérifiez vos identifiants.";
+      err.classList.remove("hidden");
+    }
+
+    // Inscription autonome du résident
+    function handleResidentSelfRegister(e) {
+      e.preventDefault();
+      const resId = document.getElementById("regResidenceSelect").value;
+      const lastName = document.getElementById("regLastName").value.trim();
+      const firstName = document.getElementById("regFirstName").value.trim();
+      const bldg = document.getElementById("regBuilding").value.trim().toUpperCase();
+      const floor = document.getElementById("regFloor").value.trim();
+      const door = document.getElementById("regDoor").value.trim();
+      const email = document.getElementById("regEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("regPassword").value.trim();
+      const err = document.getElementById("regError");
+
+      if (registeredResidents.some(r => r.email.toLowerCase() === email)) {
+        err.innerText = "❌ Cette adresse e-mail possède déjà un compte résident. Connectez-vous.";
+        err.classList.remove("hidden");
+        return;
+      }
+
+      const fullName = `${firstName} ${lastName}`;
+      const newResident = {
+        id: "res_" + Date.now(),
+        residenceId: resId,
+        email: email,
+        password: pass,
+        name: fullName,
+        building: bldg,
+        floor: floor,
+        door: door,
+        registeredAt: Date.now()
+      };
+
+      registeredResidents.push(newResident);
+      localStorage.setItem('resideo_residents_list', JSON.stringify(registeredResidents));
+
+      const targetRes = residencesData.find(r => r.id === resId) || residencesData[0];
+      activeResidence = targetRes;
+
+      currentSessionUser = {
+        name: fullName,
+        email: email,
+        role: "resident",
+        residenceId: targetRes.id,
+        building: bldg,
+        floor: floor,
+        door: door
+      };
+
+      localStorage.setItem('resideo_user', JSON.stringify(currentSessionUser));
+      alert(`Bienvenue ${fullName} !
+Votre compte résident a été créé avec succès pour ${targetRes.name} (${bldg} - ${door}).`);
+      checkAuthStatus();
+      handleUrlParams();
+    }
+
+    function showForgotPasswordAlert() {
+      openModal("modalForgotPassword");
+      return;
+      openModal("modalForgotPassword");
+    }
+
+    function handleSignOut() {
+      currentSessionUser = null;
+      localStorage.removeItem('resideo_user');
+      checkAuthStatus();
+      handleUrlParams();
+    }
+
+    // ==================== GESTION DE L'AFFICHAGE SELON LE RÔLE ====================
+    function setupUserInterface() {
+      if (!currentSessionUser) return;
+
+      const role = currentSessionUser.role;
+      const isSuper = role === 'superadmin';
+      const isBailleur = role === 'bailleur' || isSuper;
+      const isRespLoge = role === 'responsable_loge' || isSuper;
+      const isGardien = role === 'gardien' || isRespLoge || isSuper;
+      const isResident = role === 'resident';
+
+      // Badge du Header
+      const badgeRole = document.getElementById("userBadgeRole");
+      if (badgeRole) {
+        if (isSuper) {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-purple-100 font-bold text-purple-900 border border-purple-200";
+          badgeRole.innerText = "👑 Super Admin AddaWeb";
+        } else if (role === 'bailleur') {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-teal-100 font-bold text-teal-900 border border-teal-200";
+          badgeRole.innerText = "🏢 Bailleur / Syndic";
+        } else if (role === 'responsable_loge') {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-blue-100 font-bold text-blue-900 border border-blue-200";
+          badgeRole.innerText = "🛡️ Resp. de Loge";
+        } else if (currentSessionUser.customTitle) {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-purple-100 font-bold text-purple-900 border border-purple-200";
+          badgeRole.innerText = `✨ ${currentSessionUser.customTitle}`;
+        } else if (role === 'gardien') {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-amber-100 font-bold text-amber-900 border border-amber-200";
+          badgeRole.innerText = `🔑 Gardien (${currentSessionUser.building || 'Loge'})`;
+        } else {
+          badgeRole.className = "text-xs px-2.5 py-1 rounded-full bg-slate-100 font-semibold text-slate-700 border border-slate-200";
+          badgeRole.innerText = `🏡 Résident (${currentSessionUser.door || 'Apt'})`;
+        }
+      }
+
+      document.getElementById("headerResName").innerText = activeResidence ? activeResidence.name : "Résidence";
+
+      // Bouton Administration dans le header (Accessible Bailleur & Super Admin)
+      const btnSuper = document.getElementById("btnSuperAdminMaster");
+      if (btnSuper) { 
+        if (isBailleur) {
+          btnSuper.classList.remove("hidden");
+          btnSuper.title = "Gestion des Résidences, Halls & Gardiens";
+        } else {
+          btnSuper.classList.add("hidden");
+        }
+      }
+
+      // Console Bailleur (Bailleur & Super Admin)
+      const opBanner = document.getElementById("operatorBannerContainer");
+      if (opBanner) { if (isBailleur) opBanner.classList.remove("hidden"); else opBanner.classList.add("hidden"); }
+
+      // Bouton Émarger (STRICTEMENT Gardien, Resp Loge et Super Admin - TOTALEMENT MASQUÉ POUR LE RÉSIDENT ET LE BAILLEUR)
+      const btnClean = document.getElementById("btnOpenCleaningLog");
+      if (btnClean) {
+        if (role === 'gardien' || role === 'responsable_loge' || isSuper) btnClean.classList.remove("hidden");
+        else btnClean.classList.add("hidden");
+      }
+
+      // Outils Staff (Affiche, Colis, Contrôles réglementaires)
+      const staffTools = document.getElementById("sectionStaffTools");
+      if (staffTools) {
+        if (!isResident) staffTools.classList.remove("hidden");
+        else staffTools.classList.add("hidden");
+      }
+
+      // Publication d'avis de hall
+      const pubBtn = document.getElementById("btnPublishAnnContainer");
+      if (pubBtn) {
+        if (!isResident) pubBtn.classList.remove("hidden");
+        else pubBtn.classList.add("hidden");
+      }
+
+      renderAnnouncements();
+      renderIncidents();
+      renderLostFound();
+      renderInspections();
+      updateKpiSummary();
+
+      if (isBailleur) {
+        renderStaffAccountsList();
+        renderAdminResidencesList();
+        renderResidentsList();
+      }
+
+      populateAllResidenceSelects();
+      populateIncidentBuildings();
+      populateQuickSwitchSelect();
+    }
+
+    // ==================== ACTIONS DU SUPER ADMIN (CRÉER & SUPPRIMER TOUT) ====================
+    function switchSuperAdminTab(tab) {
+      const btnRes = document.getElementById("tabAdminResidencesBtn");
+      const btnAcc = document.getElementById("tabAdminAccountsBtn");
+      const btnRsd = document.getElementById("tabAdminResidentsBtn");
+      const btnSec = document.getElementById("tabAdminSecurityBtn");
+      const secRes = document.getElementById("superAdminSectionResidences");
+      const secAcc = document.getElementById("superAdminSectionAccounts");
+      const secRsd = document.getElementById("superAdminSectionResidents");
+      const secSec = document.getElementById("superAdminSectionSecurity");
+
+      const inactiveClass = "py-2 rounded-xl transition text-slate-600 hover:text-slate-900 text-center";
+      btnRes.className = inactiveClass;
+      btnAcc.className = inactiveClass;
+      btnRsd.className = inactiveClass;
+      btnSec.className = inactiveClass;
+
+      secRes.classList.add("hidden");
+      secAcc.classList.add("hidden");
+      secRsd.classList.add("hidden");
+      secSec.classList.add("hidden");
+
+      if (tab === 'residences') {
+        btnRes.className = "py-2 rounded-xl transition bg-white text-slate-900 shadow-sm text-center font-black";
+        secRes.classList.remove("hidden");
+        renderAdminResidencesList();
+      } else if (tab === 'accounts') {
+        btnAcc.className = "py-2 rounded-xl transition bg-white text-purple-900 shadow-sm text-center font-black";
+        secAcc.classList.remove("hidden");
+        renderStaffAccountsList();
+      } else if (tab === 'residents') {
+        btnRsd.className = "py-2 rounded-xl transition bg-white text-teal-900 shadow-sm text-center font-black";
+        secRsd.classList.remove("hidden");
+        renderResidentsList();
+      } else if (tab === 'security') {
+        btnSec.className = "py-2 rounded-xl transition bg-white text-purple-900 shadow-sm text-center font-black";
+        secSec.classList.remove("hidden");
+        document.getElementById("superPasswordError").classList.add("hidden");
+        document.getElementById("superPasswordSuccess").classList.add("hidden");
+      }
+    }
+
+    // Gestion du changement de mot de passe Super Admin
+    function handleUpdateSuperAdminPassword(e) {
+      e.preventDefault();
+      const currentPass = document.getElementById("currentSuperPasswordInput").value.trim();
+      const newPass = document.getElementById("newSuperPasswordInput").value.trim();
+      const confirmPass = document.getElementById("confirmSuperPasswordInput").value.trim();
+      const errBox = document.getElementById("superPasswordError");
+      const succBox = document.getElementById("superPasswordSuccess");
+
+      errBox.classList.add("hidden");
+      succBox.classList.add("hidden");
+
+      const activeSuperPass = getSuperAdminMasterPassword();
+
+      if (currentPass !== activeSuperPass) {
+        errBox.innerText = "❌ Le mot de passe actuel saisi est incorrect.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      if (newPass.length < 6) {
+        errBox.innerText = "❌ Le nouveau mot de passe doit comporter au moins 6 caractères.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      if (newPass !== confirmPass) {
+        errBox.innerText = "❌ Les deux nouveaux mots de passe ne correspondent pas.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      localStorage.setItem('resideo_superadmin_password', newPass);
+      succBox.innerText = "✓ Votre mot de passe Super Admin a été modifié avec succès !";
+      succBox.classList.remove("hidden");
+      e.target.reset();
+      alert("✓ Mot de passe Super Admin mis à jour !\nVous devrez utiliser ce nouveau mot de passe lors de vos prochaines connexions.");
+    }
+
+    function getSuperAdminMasterPassword() {
+      return localStorage.getItem('resideo_superadmin_password') || 'addaweb2026';
+    }
+
+    // 1. CRÉATION & SUPPRESSION LIBRE DES RÉSIDENCES (PAR LE SUPER ADMIN)
+    function handleAddNewResidence(e) {
+      e.preventDefault();
+      const name = document.getElementById("newResName").value.trim();
+      const code = document.getElementById("newResCode").value.trim().toUpperCase();
+      const bldgs = document.getElementById("newResBuildings").value.trim().split(',').map(b => b.trim()).filter(b => b.length > 0);
+
+      const newRes = {
+        id: "res_" + Date.now(),
+        name: name,
+        code: code,
+        buildings: bldgs.length ? bldgs : ["A"],
+        contractors: [{ trade: "Ascenseurs", company: "OTIS 24/7", phone: "0800 00 00 00" }]
+      };
+
+      residencesData.push(newRes);
+      localStorage.setItem('resideo_residences', JSON.stringify(residencesData));
+      renderAdminResidencesList();
+      populateAllResidenceSelects();
+      populateQuickSwitchSelect();
+      e.target.reset();
+      alert(`✓ Résidence "${name}" créée avec succès par le Super Admin !`);
+    }
+
+    function deleteResidence(id) {
+      if (confirm("👑 [SUPER ADMIN] Confirmer la suppression définitive de cette résidence ?")) {
+        residencesData = residencesData.filter(r => r.id !== id);
+        localStorage.setItem('resideo_residences', JSON.stringify(residencesData));
+        activeResidence = residencesData.length ? residencesData[0] : null;
+        renderAdminResidencesList();
+        populateAllResidenceSelects();
+        populateQuickSwitchSelect();
+        setupUserInterface();
+      }
+    }
+
+    function renderAdminResidencesList() {
+      const list = document.getElementById("adminResidencesList");
+      const badge = document.getElementById("residencesCountBadge");
+      if (!list) return;
+
+      badge.innerText = `${residencesData.length} résidences`;
+
+      if (!residencesData.length) {
+        list.innerHTML = `<div class="p-3 bg-white border border-slate-200 rounded-xl text-center text-xs text-slate-400">Aucune résidence configurée. Créez-en une ci-dessus.</div>`;
+        return;
+      }
+
+      list.innerHTML = residencesData.map(r => `
+        <div class="p-3 bg-white border border-slate-200 rounded-xl space-y-1 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-900">${r.name} <span class="text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded font-mono">Code: ${r.code}</span></span>
+            <button onclick="deleteResidence('${r.id}')" class="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg font-bold flex items-center space-x-1">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              <span>Supprimer</span>
+            </button>
+          </div>
+          <p class="text-slate-500 text-[11px]">Bâtiments : <strong>${r.buildings.join(', ')}</strong></p>
+        </div>
+      `).join('');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+    // 2. CRÉATION & SUPPRESSION DES COMPTES PROS (PAR LE SUPER ADMIN AVEC MOT DE PASSE TEMPORAIRE)
+        function handleSuperRoleSelectionChange(roleVal) {
+      const container = document.getElementById("customRoleInputContainer");
+      if (!container) return;
+      if (roleVal === 'custom') {
+        container.classList.remove("hidden");
+        document.getElementById("superNewAccountCustomTitle").setAttribute("required", "true");
+        document.getElementById("superNewAccountCustomTitle").focus();
+      } else {
+        container.classList.add("hidden");
+        document.getElementById("superNewAccountCustomTitle").removeAttribute("required");
+      }
+    }
+
+    function handleSuperAdminCreateAnyAccount(e) {
+      e.preventDefault();
+      const role = document.getElementById("superNewAccountRole").value;
+      const resId = document.getElementById("superNewAccountResidence").value;
+      const name = document.getElementById("superNewAccountName").value.trim();
+      const email = document.getElementById("superNewAccountEmail").value.trim().toLowerCase();
+      const pass = document.getElementById("superNewAccountPassword").value.trim();
+      const customTitle = (role === 'custom') ? (document.getElementById("superNewAccountCustomTitle").value.trim() || "Poste sur-mesure") : "";
+
+      const newAcc = {
+        id: "usr_" + role + "_" + Date.now(),
+        email: email,
+        password: pass,
+        role: (role === 'custom') ? 'gardien' : role, // base staff permissions
+        isCustomRole: (role === 'custom'),
+        customTitle: customTitle,
+        name: name,
+        residenceId: resId,
+        createdBy: currentSessionUser.email,
+        mustChangePassword: true
+      };
+
+      staffAccounts.push(newAcc);
+      localStorage.setItem('resideo_staff_accounts', JSON.stringify(staffAccounts));
+      renderStaffAccountsList();
+      e.target.reset();
+      handleSuperRoleSelectionChange('bailleur');
+      alert(`✓ Compte ${customTitle ? customTitle.toUpperCase() : role.toUpperCase()} créé avec succès pour ${name} !\n\n• Identifiant : ${email}\n• Mot de passe provisoire : ${pass}\n\nL'utilisateur définira son mot de passe secret lors de sa 1ère connexion.`);
+    }
+
+    function resetStaffPasswordByAdmin(userId) {
+      const account = staffAccounts.find(a => a.id === userId);
+      if (!account) return;
+
+      const newTempPassword = prompt(`👑 [SUPER ADMIN] Réinitialisation d'accès pour :
+${account.name} (${account.email})
+
+Entrez le nouveau mot de passe temporaire :`, "PassTemp2026");
+
+      if (newTempPassword && newTempPassword.trim().length >= 4) {
+        account.password = newTempPassword.trim();
+        account.mustChangePassword = true; // Forcera la modale de sécurisation à la prochaine connexion
+        localStorage.setItem('resideo_staff_accounts', JSON.stringify(staffAccounts));
+        renderStaffAccountsList();
+        alert(`✓ Accès réinitialisé !
+
+• Identifiant : ${account.email}
+• Nouveau mot de passe temporaire : ${newTempPassword.trim()}
+
+Tout son historique de travail, signalements et registres est 100% conservé.`);
+      }
+    }
+
+    function deleteStaffMember(id) {
+      if (confirm("👑 [SUPER ADMIN] Confirmer la suppression définitive de ce compte professionnel ?")) {
+        staffAccounts = staffAccounts.filter(a => a.id !== id);
+        localStorage.setItem('resideo_staff_accounts', JSON.stringify(staffAccounts));
+        renderStaffAccountsList();
+      }
+    }
+
+    function renderStaffAccountsList() {
+      const container = document.getElementById("staffAccountsList");
+      const badgeCount = document.getElementById("staffAccountsCountBadge");
+      if (!container) return;
+
+      badgeCount.innerText = `${staffAccounts.length} comptes`;
+
+      container.innerHTML = staffAccounts.map(acc => {
+        const resObj = residencesData.find(r => r.id === acc.residenceId);
+        const resName = acc.residenceId === 'all' ? 'Toutes résidences' : (resObj ? resObj.name : 'Résidence');
+        const roleLabel = acc.role === 'superadmin' ? '👑 Super Admin' :
+                          acc.customTitle ? `✨ ${acc.customTitle}` :
+                          acc.role === 'bailleur' ? '🏢 Bailleur / Syndic' :
+                          acc.role === 'responsable_loge' ? '🛡️ Resp. de Loge' : '🔑 Gardien';
+
+        return `
+          <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="font-bold text-slate-900">${acc.name}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-800">${roleLabel}</span>
+                ${acc.mustChangePassword ? '<span class="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 rounded">Code provisoire</span>' : '<span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1 rounded">MDP Privé OK</span>'}
+              </div>
+              <span class="text-slate-500 text-[11px] block mt-0.5">📧 ${acc.email} • Pass: <code>${acc.password}</code> • <strong>${resName}</strong></span>
+            </div>
+            ${acc.role !== 'superadmin' ? `
+              <div class="flex items-center space-x-1">
+                <button onclick="resetStaffPasswordByAdmin('${acc.id}')" class="px-2 py-1 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-lg font-bold text-xs" title="Réinitialiser le mot de passe">
+                  🔑 Réinit
+                </button>
+                <button onclick="deleteStaffMember('${acc.id}')" class="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-lg font-bold text-xs">
+                  Supprimer
+                </button>
+              </div>
+            ` : '<span class="text-[10px] text-purple-700 font-bold">Maître</span>'}
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+    // 3. GESTION DES RÉSIDENTS (CRÉER / SUPPRIMER)
+    function handleSuperAdminAddResident(e) {
+      e.preventDefault();
+      const resId = document.getElementById("adminNewResidentRes").value;
+      const door = document.getElementById("adminNewResidentDoor").value.trim();
+      const name = document.getElementById("adminNewResidentName").value.trim();
+
+      registeredResidents.push({
+        id: "res_" + Date.now(),
+        residenceId: resId,
+        name: name,
+        door: door,
+        email: `resident_${Date.now()}@resideo.fr`,
+        password: "123"
+      });
+
+      localStorage.setItem('resideo_residents_list', JSON.stringify(registeredResidents));
+      renderResidentsList();
+      e.target.reset();
+      alert(`✓ Résident ${name} ajouté avec succès !`);
+    }
+
+    function deleteResidentAccount(id) {
+      if (confirm("👑 [SUPER ADMIN] Supprimer ce compte résident ?")) {
+        registeredResidents = registeredResidents.filter(r => r.id !== id);
+        localStorage.setItem('resideo_residents_list', JSON.stringify(registeredResidents));
+        renderResidentsList();
+      }
+    }
+
+    function renderResidentsList() {
+      const container = document.getElementById("residentsListContainer");
+      const badgeCount = document.getElementById("residentsCountBadge");
+      if (!container) return;
+
+      badgeCount.innerText = `${registeredResidents.length} résidents`;
+
+      if (!registeredResidents.length) {
+        container.innerHTML = `<div class="p-3 bg-white border border-slate-200 rounded-xl text-center text-xs text-slate-400">Aucun résident inscrit.</div>`;
+        return;
+      }
+
+      container.innerHTML = registeredResidents.map(r => {
+        const resObj = residencesData.find(x => x.id === r.residenceId);
+        return `
+          <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+            <div>
+              <span class="font-bold text-slate-900">${r.name}</span>
+              <span class="text-slate-500 text-[11px] block">📍 ${r.door || r.building} • ${resObj ? resObj.name : 'Résidence'}</span>
+            </div>
+            <button onclick="deleteResidentAccount('${r.id}')" class="px-2 py-1 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-lg font-bold text-xs">
+              Supprimer
+            </button>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+    // ==================== RENDU DES SIGNALEMENTS AVEC SUPPRESSION DIRECTE ====================
+    function setIncidentFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        if (btn.getAttribute('data-filter') === filter) {
+          btn.className = "filter-btn active px-3 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-white transition whitespace-nowrap";
+        } else {
+          btn.className = "filter-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition whitespace-nowrap";
+        }
+      });
+      renderIncidents();
+    }
+
+    function renderIncidents() {
+      const c = document.getElementById('incidentsList');
+      if (!c) return;
+      const isSuper = currentSessionUser && currentSessionUser.role === 'superadmin';
+      const isResident = currentSessionUser && currentSessionUser.role === 'resident';
+      const userEmail = currentSessionUser ? (currentSessionUser.email || '').toLowerCase() : '';
+
+      // 1. Filtrage de confidentialité :
+      // - Si résident : voit tous les 'commun' de sa résidence + ses propres 'privatif'
+      // - Si staff / superadmin : voit tous les incidents de la résidence
+      let list = incidents.filter(i => {
+        if (activeResidence && i.residenceId && i.residenceId !== activeResidence.id) return false;
+        if (isResident) {
+          if (i.scope === 'privatif') {
+            return i.authorEmail === userEmail; // Seul le résident qui a créé voit son privatif
+          }
+          return true; // Commun visible par tous
+        }
+        return true; // Staff voit tout
+      });
+
+      // 2. Application du filtre sélectionné (Tous, Devis, Communs, Privatifs)
+      if (currentFilter === 'communs') {
+        list = list.filter(i => (!i.scope || i.scope === 'commun'));
+      } else if (currentFilter === 'privatifs') {
+        list = list.filter(i => i.scope === 'privatif');
+      } else if (currentFilter === 'devis') {
+        list = list.filter(i => i.status === 'devis');
+      } else if (currentFilter === 'resolu') {
+        list = list.filter(i => i.status === 'résolu');
+      }
+
+      if (!list.length) {
+        c.innerHTML = `<div class="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-xs">Aucun incident dans cette catégorie.</div>`;
+        return;
+      }
+
+      c.innerHTML = list.map(inc => {
+        const isPrivatif = inc.scope === 'privatif';
+        const scopeBadge = isPrivatif 
+          ? `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-900">🔒 Privatif (Logement)</span>`
+          : `<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-teal-100 text-teal-900">🏢 Parties Communes</span>`;
+
+        // Affichage de l'auteur :
+        // Pour les voisins : Prénom + Initiale (ex: Sophie B.)
+        // Pour le staff (gardien, bailleur, superadmin) sur incident privé : Nom complet + Porte pour pouvoir intervenir !
+        const authorLabel = (!isResident && isPrivatif && inc.authorFullDetails) ? inc.authorFullDetails : (inc.authorName || 'Résident');
+
+        const alreadyConfirmed = currentSessionUser && inc.confirmations && inc.confirmations.includes(userEmail);
+
+        return `
+          <div class="bg-white border-l-4 ${isPrivatif ? 'border-l-purple-500' : 'border-l-teal-600'} border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center space-x-1.5 mb-1">
+                  ${scopeBadge}
+                  ${inc.status === 'résolu' 
+                    ? '<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-300">🟢 Résolu</span>'
+                    : inc.status === 'mandaté'
+                    ? '<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">🔧 Mandaté</span>'
+                    : inc.status === 'devis'
+                    ? '<span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 text-purple-900 border border-purple-300">🟣 En Devis</span>'
+                    : '<span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">🔴 En attente</span>'}
+                </div>
+                <h4 class="font-extrabold text-sm sm:text-base text-slate-900">${inc.title}</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">Signalé par : <strong class="text-slate-600">${authorLabel}</strong></p>
+              </div>
+              
+              <div class="flex items-center space-x-1.5 flex-shrink-0">
+                ${!isResident ? `
+                  <button onclick="openMandateModal('${inc.id}')" class="text-xs font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1" title="Mandater un artisan">
+                    <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+                    <span>${inc.status === 'mandaté' ? '✓ Intervention' : 'Mandater'}</span>
+                  </button>
+                  ${inc.status !== 'résolu' ? `
+                    <button onclick="handleResolveIncident('${inc.id}')" class="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1.5 rounded-xl transition flex items-center space-x-1" title="Marquer comme résolu">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      <span>Résolu</span>
+                    </button>
+                  ` : ''}
+                ` : ''}
+                ${isSuper ? `
+                  <button onclick="deleteIncident('${inc.id}')" class="p-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl" title="Supprimer ce signalement">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">${inc.description}</p>
+            ${inc.photo ? `
+              <div class="mt-2 rounded-xl overflow-hidden border border-slate-200 max-h-48 w-full sm:max-w-xs bg-slate-50">
+                <img src="${inc.photo}" alt="Photo de l'incident" class="w-full h-auto object-cover max-h-48 cursor-pointer hover:opacity-95 transition" onclick="window.open(this.src)">
+              </div>
+            ` : ''}
+            ${inc.mandatedTo ? `
+              <div class="p-2 bg-amber-50/70 border border-amber-200/60 rounded-xl text-[11px] text-amber-900">
+                🔧 <strong>Artisan :</strong> Mandaté à ${inc.mandatedTo} pour le ${new Date(inc.interventionDate).toLocaleDateString('fr-FR')}.
+              </div>
+            ` : ''}
+            ${inc.status === 'résolu' ? `
+              <div class="p-2 bg-emerald-50 border border-emerald-200 rounded-xl text-[11px] text-emerald-950">
+                🟢 <strong>Résolu le ${new Date(inc.resolvedAt || Date.now()).toLocaleDateString('fr-FR')} (${inc.resolvedBy || 'Gestion'}) :</strong> ${inc.resolutionNote || 'Travaux terminés.'}
+              </div>
+            ` : ''}
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Bâtiment ${inc.building || 'A'}</span>
+              ${!isPrivatif ? `
+                <button onclick="handleConfirmIncident('${inc.id}')" class="text-xs font-bold px-3 py-1 rounded-xl transition ${alreadyConfirmed ? 'bg-teal-600 text-white' : 'bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100'}">
+                  +1 Je confirme (${inc.confirmations ? inc.confirmations.length : 0})
+                </button>
+              ` : '<span class="text-[10px] font-bold text-purple-700">Demande individuelle</span>'}
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+    function handleConfirmIncident(id) {
+      if (!currentSessionUser) return;
+      const inc = incidents.find(i => i.id === id);
+      if (!inc) return;
+      if (!inc.confirmations) inc.confirmations = [];
+      const email = currentSessionUser.email.toLowerCase();
+      const idx = inc.confirmations.indexOf(email);
+      if (idx === -1) {
+        inc.confirmations.push(email);
+      } else {
+        inc.confirmations.splice(idx, 1);
+      }
+      localStorage.setItem('resideo_incidents', JSON.stringify(incidents));
+      renderIncidents();
+    }
+
+    function deleteIncident(id) {
+      if (confirm("👑 [SUPER ADMIN] Supprimer ce signalement d'incident ?")) {
+        incidents = incidents.filter(i => i.id !== id);
+        localStorage.setItem('resideo_incidents', JSON.stringify(incidents));
+        renderIncidents();
+      }
+    }
+
+    function renderAnnouncements() {
+      const c = document.getElementById('announcementsList');
+      if (!c) return;
+      const isSuper = currentSessionUser && currentSessionUser.role === 'superadmin';
+      const filtered = announcements.filter(a => !activeResidence || !a.residenceId || a.residenceId === activeResidence.id);
+
+      if (!filtered.length) {
+        c.innerHTML = `<div class="bg-white border border-slate-200 rounded-2xl p-4 text-center text-slate-400 text-xs">Aucun avis officiel affiché.</div>`;
+        return;
+      }
+
+      c.innerHTML = filtered.map(a => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-teal-50 text-teal-700">Note de Hall</span>
+            ${isSuper ? `
+              <button onclick="deleteAnnouncement('${a.id}')" class="text-rose-600 hover:text-rose-800 p-1" title="Supprimer cet avis">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            ` : ''}
+          </div>
+          <h3 class="font-extrabold text-sm text-slate-900">${a.title}</h3>
+          <p class="text-xs text-slate-600">${a.content}</p>
+        </div>
+      `).join('');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+    function deleteAnnouncement(id) {
+      if (confirm("👑 [SUPER ADMIN] Supprimer cet avis de hall ?")) {
+        announcements = announcements.filter(a => a.id !== id);
+        localStorage.setItem('resideo_announcements', JSON.stringify(announcements));
+        renderAnnouncements();
+      }
+    }
+
+    // ==================== FONCTIONS UTILITAIRES ====================
+    function populateAllResidenceSelects() {
+      const selects = [
+        document.getElementById("regResidenceSelect"),
+        document.getElementById("superNewAccountResidence"),
+        document.getElementById("adminNewResidentRes"),
+        document.getElementById("posterSelectResidence")
+      ];
+      const opts = residencesData.length ? residencesData.map(r => `<option value="${r.id}">${r.name} (${r.code})</option>`).join('') : '<option value="">Aucune résidence</option>';
+      selects.forEach(sel => { if (sel) sel.innerHTML = opts; });
+    }
+
+    function populateQuickSwitchSelect() {
+      const sel = document.getElementById("quickSwitchResidenceSelect");
+      if (!sel) return;
+      sel.innerHTML = residencesData.map(r => `<option value="${r.id}" ${activeResidence && r.id === activeResidence.id ? 'selected' : ''}>${r.name}</option>`).join('');
+    }
+
+    function handleQuickSwitchResidence(resId) {
+      const target = residencesData.find(r => r.id === resId);
+      if (!target) return;
+      activeResidence = target;
+      setupUserInterface();
+    }
+
+    function populateIncidentBuildings() {
+      const sel = document.getElementById("incBuildingSelect");
+      if (!sel || !activeResidence) return;
+      sel.innerHTML = (activeResidence.buildings || ["A"]).map(b => `<option value="${b}">Bâtiment ${b}</option>`).join('');
+    }
+
+        // ==================== GESTION DUAL AFFICHES (RÉSIDENTS VS GARDIENS) ====================
+    let currentPosterMode = 'resident'; // 'resident' ou 'gardien'
+
+    function switchPosterType(mode) {
+      currentPosterMode = mode;
+      const btnRes = document.getElementById("tabPosterResidentBtn");
+      const btnGar = document.getElementById("tabPosterGardienBtn");
+      const tplRes = document.getElementById("posterTemplateResident");
+      const tplGar = document.getElementById("posterTemplateGardien");
+      const zoneContainer = document.getElementById("posterZoneContainer");
+      const statusInd = document.getElementById("posterStatusIndicator");
+
+      if (mode === 'resident') {
+        btnRes.className = "py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 bg-white text-teal-900 shadow-sm";
+        btnGar.className = "py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900";
+        tplRes.classList.remove("hidden");
+        tplGar.classList.add("hidden");
+        zoneContainer.classList.add("hidden");
+        statusInd.innerHTML = 'Affiche sélectionnée : <strong class="text-teal-700">Hall d\'entrée (Résidents)</strong>';
+      } else {
+        btnGar.className = "py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 bg-slate-900 text-amber-400 shadow-sm";
+        btnRes.className = "py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center space-x-2 text-slate-600 hover:text-slate-900";
+        tplGar.classList.remove("hidden");
+        tplRes.classList.add("hidden");
+        zoneContainer.classList.remove("hidden");
+        statusInd.innerHTML = 'Affiche sélectionnée : <strong class="text-amber-700">Zones Techniques & Gardiens (Sous-sols, Bacs, Caves)</strong>';
+      }
+      updatePosterData();
+      lucide.createIcons();
+    }
+
+    function populatePosterSelects() {
+      const sel = document.getElementById("posterSelectResidence");
+      if (!sel) return;
+      sel.innerHTML = residencesData.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      handlePosterResidenceChange();
+    }
+
+    function handlePosterResidenceChange() {
+      const sel = document.getElementById("posterSelectResidence");
+      if (!sel) return;
+      const res = residencesData.find(r => r.id === sel.value) || residencesData[0];
+      const batSel = document.getElementById("posterSelectBuilding");
+      batSel.innerHTML = (res && res.buildings ? res.buildings : ["A"]).map(b => `<option value="${b}">Bâtiment ${b}</option>`).join('');
+      updatePosterData();
+    }
+
+    function updatePosterData() {
+      const resSel = document.getElementById("posterSelectResidence");
+      if (!resSel) return;
+      const res = residencesData.find(r => r.id === resSel.value) || residencesData[0];
+      if (!res) return;
+      const bat = document.getElementById("posterSelectBuilding").value || (res.buildings ? res.buildings[0] : "A");
+      const zone = document.getElementById("posterSelectZone") ? document.getElementById("posterSelectZone").value : "Local Poubelles & Bacs";
+
+      if (currentPosterMode === 'resident') {
+        // MISE À JOUR AFFICHE RÉSIDENT
+        const nameEl = document.getElementById("posterResidentResName");
+        const badgeEl = document.getElementById("posterResidentCodeBadge");
+        if (nameEl) nameEl.innerText = res.name;
+        if (badgeEl) badgeEl.innerText = `Bâtiment ${bat} — Code : ${res.code}-${bat}`;
+
+        const targetRes = document.getElementById("dynamicQrCodeResident");
+        if (targetRes) {
+          targetRes.innerHTML = "";
+          const targetUrl = `${window.location.origin}/?role=resident&res=${res.id}&bat=${bat}`;
+          new QRCode(targetRes, {
+            text: targetUrl,
+            width: 155,
+            height: 155,
+            colorDark: "#004d40",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        }
+      } else {
+        // MISE À JOUR AFFICHE GARDIEN / TECHNIQUE
+        const zoneDisp = document.getElementById("posterGardienZoneDisplay");
+        const bldgBadge = document.getElementById("posterGardienBuildingBadge");
+        const nameGar = document.getElementById("posterGardienResName");
+        const codeGar = document.getElementById("posterGardienCodeBadge");
+
+        if (zoneDisp) zoneDisp.innerText = zone;
+        if (bldgBadge) bldgBadge.innerText = `${res.name} • Bâtiment ${bat}`;
+        if (nameGar) nameGar.innerText = res.name;
+        if (codeGar) codeGar.innerText = `${res.code}-${bat}-TECH`;
+
+        const targetGar = document.getElementById("dynamicQrCodeGardien");
+        if (targetGar) {
+          targetGar.innerHTML = "";
+          const targetUrl = `${window.location.origin}/?role=gardien&res=${res.id}&bat=${bat}&zone=${encodeURIComponent(zone)}`;
+          new QRCode(targetGar, {
+            text: targetUrl,
+            width: 155,
+            height: 155,
+            colorDark: "#78350f",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        }
+      }
+    }
+
+    function openPosterModal() {
+      populatePosterSelects();
+      switchPosterType('resident');
+      openModal('modalPoster');
+    }
+
+    function triggerCleanPosterPrint() {
+      const printZone = document.getElementById("printAreaContainer");
+      const activeTemplateId = (currentPosterMode === 'resident') ? 'posterTemplateResident' : 'posterTemplateGardien';
+      const templateEl = document.getElementById(activeTemplateId);
+
+      if (!templateEl) return;
+
+      printZone.innerHTML = templateEl.innerHTML;
+      printZone.className = (currentPosterMode === 'resident') ? 'block bg-white text-slate-800' : 'block bg-slate-950 text-white p-4';
+      window.print();
+      setTimeout(() => { printZone.innerHTML = ""; printZone.className = "hidden"; }, 1000);
+    }
+
+    function toggleScopeHelp(scope) {
+      const help = document.getElementById("scopeHelpText");
+      if (!help) return;
+      if (scope === 'commun') {
+        help.innerText = "ℹ️ Signalement d'immeuble : Visible par les résidents de votre résidence (votre nom apparaîtra sous la forme : Prénom + Initiale pour protéger votre vie privée).";
+        help.className = "text-[10px] text-slate-500 mt-1 italic";
+      } else {
+        help.innerText = "🔒 Signalement privé : Visible UNIQUEMENT par vous-même, le gardien et la régie. Les autres résidents ne le verront pas.";
+        help.className = "text-[10px] text-purple-700 font-bold mt-1";
+      }
+    }
+
+    function formatAnonymizedAuthor(user) {
+      if (!user) return "Résident";
+      // Si c'est un agent pro ou gardien, on garde son rôle/nom
+      if (user.role && user.role !== 'resident') return user.name;
+      
+      const cleanName = (user.name || "Résident").trim();
+      const parts = cleanName.split(/\s+/);
+      if (parts.length >= 2) {
+        const prenom = parts[0];
+        const initiale = parts[parts.length - 1].charAt(0).toUpperCase() + ".";
+        return `${prenom} ${initiale}`;
+      }
+      return cleanName;
+    }
+
+    function handleCreateIncident(e) {
+      e.preventDefault();
+      const scopeRadio = document.querySelector('input[name="incScopeRadio"]:checked');
+      const scope = scopeRadio ? scopeRadio.value : 'commun';
+      const bldg = document.getElementById("incBuildingSelect").value;
+      const cat = document.getElementById("incCategory").value;
+      const title = document.getElementById("incTitle").value;
+      const desc = document.getElementById("incDescription").value;
+
+      // Détermination du nom d'auteur : Prénom + Initiale si commun, complet si privé pour la régie
+      const publicDisplayName = formatAnonymizedAuthor(currentSessionUser);
+      const privateAuthorDetails = currentSessionUser ? `${currentSessionUser.name} (${currentSessionUser.door || currentSessionUser.building || 'Apt'})` : "Résident";
+
+      const newInc = {
+        id: "inc_" + Date.now(),
+        residenceId: activeResidence ? activeResidence.id : "",
+        building: bldg,
+        category: cat,
+        scope: scope, // "commun" ou "privatif"
+        title: title,
+        description: desc,
+        photo: currentIncidentPhotoBase64,
+        authorEmail: currentSessionUser ? currentSessionUser.email.toLowerCase() : "",
+        authorName: publicDisplayName, // Affichage public anonymisé (ex: Sophie B.)
+        authorFullDetails: privateAuthorDetails, // Pour la régie et le gardien
+        createdAt: Date.now(),
+        status: "nouveau",
+        confirmations: []
+      };
+
+      incidents.unshift(newInc);
+      localStorage.setItem('resideo_incidents', JSON.stringify(incidents));
+      renderIncidents();
+      closeModal('modalCreateIncident');
+      e.target.reset();
+      toggleScopeHelp('commun');
+      alert(scope === 'commun' ? "✓ Signalement publié sur les parties communes (affiché sous forme anonymisée : " + publicDisplayName + ") !" : "✓ Demande privée transmise au gardien et à la gestion !");
+    }
+
+    function handleCreateAnnouncement(e) {
+      e.preventDefault();
+      announcements.unshift({
+        id: "ann_" + Date.now(),
+        residenceId: activeResidence ? activeResidence.id : "",
+        title: document.getElementById("annTitle").value,
+        content: document.getElementById("annContent").value,
+        createdAt: Date.now()
+      });
+      localStorage.setItem('resideo_announcements', JSON.stringify(announcements));
+      renderAnnouncements();
+      closeModal('modalCreateAnnouncement');
+      e.target.reset();
+    }
+
+    function handleCleaningLogSubmit(e) {
+      e.preventDefault();
+      const comp = document.getElementById("cleanerCompany").value;
+      document.getElementById("cleaningLastText").innerText = `Dernier passage : Aujourd'hui à ${new Date().toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'})} par ${comp}`;
+      closeModal('modalCleaningLog');
+      alert("✓ Émargement passage propreté validé !");
+    }
+
+    function handleCreateLostFound(e) {
+      e.preventDefault();
+      lostFoundItems.unshift({
+        id: "lf_" + Date.now(),
+        residenceId: activeResidence ? activeResidence.id : "",
+        type: document.getElementById("lfType").value,
+        location: document.getElementById("lfLocation").value,
+        title: document.getElementById("lfTitle").value,
+        status: "disponible"
+      });
+      localStorage.setItem('resideo_lost_found', JSON.stringify(lostFoundItems));
+      renderLostFound();
+      e.target.reset();
+      alert("✓ Objet enregistré en loge !");
+    }
+
+    function renderLostFound() {
+      const c = document.getElementById("lostFoundList");
+      if (!c) return;
+      const filtered = lostFoundItems.filter(i => !activeResidence || !i.residenceId || i.residenceId === activeResidence.id);
+      document.getElementById("badgeLostFoundCount").innerText = `${filtered.length} en attente`;
+      c.innerHTML = filtered.map(i => `
+        <div class="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+          <div>
+            <span class="font-bold text-slate-900">${i.title}</span>
+            <span class="text-slate-500 text-[11px] block">📍 ${i.location}</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">En loge</span>
+            <a href="https://api.whatsapp.com/send?text=${encodeURIComponent('Bonjour, votre colis (' + i.title + ') est arrivé et disponible à la loge : ' + i.location + '. Cordialement.')}" target="_blank" class="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-[10px] font-bold flex items-center space-x-1" title="Prévenir le résident sur WhatsApp">
+              <span>💬 WhatsApp</span>
+            </a>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleInspectionSubmit(e) {
+      e.preventDefault();
+      regulatoryInspections.unshift({
+        id: "insp_" + Date.now(),
+        residenceId: activeResidence ? activeResidence.id : "",
+        type: document.getElementById("inspType").value,
+        company: document.getElementById("inspCompany").value,
+        date: Date.now()
+      });
+      localStorage.setItem('resideo_inspections', JSON.stringify(regulatoryInspections));
+      renderInspections();
+      updateKpiSummary();
+      e.target.reset();
+      alert("✓ Visite réglementaire enregistrée !");
+    }
+
+    function renderInspections() {
+      const c = document.getElementById("inspectionsHistoryList");
+      if (!c) return;
+      const filtered = regulatoryInspections.filter(i => !activeResidence || !i.residenceId || i.residenceId === activeResidence.id);
+      c.innerHTML = filtered.map(i => `
+        <div class="p-2.5 bg-white border border-slate-200 rounded-xl text-xs space-y-0.5">
+          <div class="flex items-center justify-between font-bold text-slate-900">
+            <span>${i.type}</span>
+            <span class="text-slate-400 font-mono text-[10px]">${new Date(i.date).toLocaleDateString('fr-FR')}</span>
+          </div>
+          <p class="text-slate-500 text-[11px]">Intervenant : ${i.company}</p>
+        </div>
+      `).join('');
+    }
+
+    function openEmergencyModal() {
+      const container = document.getElementById("emergencyContactsList");
+      const isBailleur = currentSessionUser && (currentSessionUser.role === 'bailleur' || currentSessionUser.role === 'superadmin');
+
+      // Titre personnalisé avec le nom de la résidence
+      const subTitle = document.getElementById("emergencyModalSubTitle");
+      if (subTitle && activeResidence) {
+        subTitle.innerText = `${activeResidence.name} • Astreintes & Urgences`;
+      }
+
+      // Affichage du bouton/formulaire d'ajout pour le Bailleur / SuperAdmin
+      const addBox = document.getElementById("bailleurAddContractorBox");
+      if (addBox) {
+        if (isBailleur) addBox.classList.remove("hidden");
+        else addBox.classList.add("hidden");
+      }
+
+      const customList = (activeResidence && activeResidence.contractors && activeResidence.contractors.length) 
+        ? activeResidence.contractors 
+        : [];
+
+      // Liste des urgences nationales et services de base
+      const baseEmergencyList = [
+        { id: "base_otis", trade: "🛗 Ascenseur Dépannage 24/7", company: "OTIS / Dépannage Cabine", phone: "0800 12 34 56", urgent: true, isBase: true },
+        { id: "base_grdf", trade: "🔥 Urgence Sécurité Gaz", company: "GrDF Sécurité Dépannage", phone: "0800 47 33 33", urgent: true, isBase: true },
+        { id: "base_enedis", trade: "⚡ Dépannage Électricité", company: "Enedis Dépannage 24/7", phone: "09 72 67 50 00", urgent: true, isBase: true },
+        { id: "base_plomb", trade: "💧 Fuite d'eau & Plomberie", company: "Astreinte Plomberie Générale", phone: "01 40 12 34 56", urgent: false, isBase: true },
+        { id: "base_serr", trade: "🚪 Serrurerie & Portes Communes", company: "Serrurerie Sécurité Résidence", phone: "01 42 34 56 78", urgent: false, isBase: true },
+        { id: "base_loge", trade: "🔑 Loge & Gardien", company: "Permanence Gardien Résidence", phone: "06 12 34 56 78", urgent: false, isBase: true },
+        { id: "base_syndic", trade: "🏢 Syndic / Gestion Immobilière", company: "Permanence Résidéo Gestion", phone: "01 45 67 89 00", urgent: false, isBase: true },
+        { id: "base_18", trade: "🚒 Pompiers (Secours & Fuites)", company: "Pompiers de Paris / National", phone: "18", urgent: true, isBase: true },
+        { id: "base_15", trade: "🚑 SAMU (Urgence Médicale)", company: "SAMU Urgences", phone: "15", urgent: true, isBase: true },
+        { id: "base_17", trade: "👮 Police / Gendarmerie", company: "Police Secours", phone: "17", urgent: true, isBase: true }
+      ];
+
+      // On affiche d'abord les prestataires sous contrat du bailleur, puis les urgences de base
+      const finalList = [...customList.map(c => ({ ...c, isCustom: true })), ...baseEmergencyList];
+
+      container.innerHTML = finalList.map(c => {
+        const canDelete = isBailleur && c.isCustom;
+        const contractorId = c.id || c.phone;
+        return `
+          <div class="p-3 bg-white border ${c.urgent ? 'border-rose-200 bg-rose-50/20' : 'border-slate-200'} rounded-2xl flex items-center justify-between shadow-xs">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] font-extrabold ${c.urgent ? 'text-rose-800 bg-rose-100' : 'text-teal-800 bg-teal-50'} px-2 py-0.5 rounded-full inline-block">${c.trade}</span>
+                ${c.isCustom ? '<span class="text-[9px] font-bold text-teal-700 bg-teal-50 border border-teal-200 px-1.5 py-0.2 rounded">⭐ Contrat Résidence</span>' : ''}
+              </div>
+              <h4 class="font-extrabold text-xs sm:text-sm text-slate-900">${c.company}</h4>
+              <p class="text-xs font-mono font-bold text-slate-600">${c.phone}</p>
+            </div>
+            <div class="flex items-center space-x-1.5 flex-shrink-0">
+              <a href="tel:${c.phone.replace(/\s+/g, '')}" class="px-3.5 py-2 ${c.urgent ? 'bg-rose-600 hover:bg-rose-700' : 'bg-teal-600 hover:bg-teal-700'} text-white font-extrabold text-xs rounded-xl shadow-xs transition flex items-center space-x-1 active:scale-95">
+                <i data-lucide="phone" class="w-3.5 h-3.5"></i>
+                <span>Appeler</span>
+              </a>
+              ${canDelete ? `
+                <button type="button" onclick="deleteCustomContractor('${contractorId}')" class="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition border border-rose-200" title="Supprimer ce prestataire d'astreinte">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      openModal('modalDocuments');
+      lucide.createIcons();
+      updateKpiSummary();
+    }
+
+// GESTION DU SCAN QR CODE (Redirection automatique avec pré-remplissage)
+        // GESTION DU SCAN QR CODE DYNAMIQUE (RÉSIDENTS ET GARDIENS)
+    function handleUrlParams() {
+      const params = new URLSearchParams(window.location.search);
+      const roleParam = params.get('role');
+      const resId = params.get('res');
+      const bat = params.get('bat');
+      const zone = params.get('zone');
+
+      if (roleParam === 'gardien' || zone) {
+        // Redirection vers le portail de connexion staff avec notification
+        switchAuthPortal('login');
+        if (zone) {
+          const loginErr = document.getElementById('loginError');
+          if (loginErr) {
+            loginErr.className = "p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs font-bold text-center";
+            loginErr.innerText = `🛡️ Zone technique scannée : ${decodeURIComponent(zone)} (Bât ${bat || 'A'}). Connectez-vous avec vos identifiants Staff pour valider votre ronde.`;
+            loginErr.classList.remove('hidden');
+          }
+        }
+      } else if (resId || bat) {
+        // Redirection vers l'inscription résident pré-remplie
+        switchAuthPortal('register');
+        if (resId) {
+          const select = document.getElementById("regResidenceSelect");
+          if (select) select.value = resId;
+        }
+        if (bat) {
+          const inputBat = document.getElementById("regBuilding");
+          if (inputBat) inputBat.value = bat;
+        }
+      }
+    }
+
+    
+
+        // CLÔTURE ET RÉSOLUTION D'INCIDENT (GARDIEN / BAILLEUR / ADMIN)
+    function handleResolveIncident(incidentId) {
+      const inc = incidents.find(i => i.id === incidentId);
+      if (!inc) return;
+
+      const resolutionNote = prompt(`✓ Clôturer le signalement : "${inc.title}"\n\nIndiquez les travaux effectués ou la note de résolution pour les résidents :`, "Intervention effectuée et problème résolu.");
+      if (resolutionNote === null) return; // annulation
+
+      inc.status = 'résolu';
+      inc.resolvedAt = Date.now();
+      inc.resolvedBy = currentSessionUser ? (currentSessionUser.customTitle || currentSessionUser.name) : "Gestion";
+      inc.resolutionNote = resolutionNote.trim() || "Problème résolu.";
+
+      localStorage.setItem('resideo_incidents', JSON.stringify(incidents));
+      renderIncidents();
+      updateKpiSummary();
+      alert("✓ Signalement clôturé et marqué comme résolu ! Les résidents peuvent désormais voir que le problème est réglé.");
+    }
+
+    // MISE À JOUR DES COMPTEURS KPIS EN DIRECT
+    function updateKpiSummary() {
+      const openElem = document.getElementById("kpiOpenCount");
+      const mandElem = document.getElementById("kpiMandatedCount");
+      const resElem = document.getElementById("kpiResolvedCount");
+      const parcElem = document.getElementById("kpiParcelsCount");
+
+      if (!openElem || !mandElem || !resElem || !parcElem) return;
+
+      const activeResIncidents = incidents.filter(i => !activeResidence || !i.residenceId || i.residenceId === activeResidence.id);
+      const openCount = activeResIncidents.filter(i => !i.status || i.status === 'nouveau').length;
+      const mandatedCount = activeResIncidents.filter(i => i.status === 'mandaté' || i.status === 'devis').length;
+      const resolvedCount = activeResIncidents.filter(i => i.status === 'résolu').length;
+
+      const activeResParcels = lostFoundItems.filter(p => (!activeResidence || !p.residenceId || p.residenceId === activeResidence.id) && p.status === 'disponible').length;
+
+      openElem.innerText = openCount;
+      mandElem.innerText = mandatedCount;
+      resElem.innerText = resolvedCount;
+      parcElem.innerText = activeResParcels;
+    }
+
+    // MANDATEMENT D'ARTISAN
+    function openMandateModal(incidentId) {
+      const inc = incidents.find(i => i.id === incidentId);
+      if (!inc) return;
+      document.getElementById("mandateIncidentId").value = inc.id;
+      document.getElementById("mandateIncidentTitle").innerText = `${inc.title} (${inc.building ? 'Bât ' + inc.building : ''})`;
+      document.getElementById("mandateContractorName").value = inc.mandatedTo || "";
+      document.getElementById("mandateInstructions").value = inc.mandateNotes || "";
+      
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      document.getElementById("mandateInterventionDate").value = inc.interventionDate || tomorrow.toISOString().slice(0,10);
+      
+      openModal('modalMandateContractor');
+    }
+
+    function handleConfirmMandate(e) {
+      e.preventDefault();
+      const incId = document.getElementById("mandateIncidentId").value;
+      const contractor = document.getElementById("mandateContractorName").value.trim();
+      const dateVal = document.getElementById("mandateInterventionDate").value;
+      const notes = document.getElementById("mandateInstructions").value.trim();
+
+      const inc = incidents.find(i => i.id === incId);
+      if (inc) {
+        inc.status = "mandaté";
+        inc.mandatedTo = contractor;
+        inc.interventionDate = dateVal;
+        inc.mandateNotes = notes;
+        localStorage.setItem('resideo_incidents', JSON.stringify(incidents));
+        renderIncidents();
+      }
+      closeModal('modalMandateContractor');
+      alert(`✓ Artisan ${contractor} mandaté avec succès pour le ${new Date(dateVal).toLocaleDateString('fr-FR')} !`);
+    }
+
+    function exportIncidentsToCSV() {
+      if (!incidents.length) {
+        alert("Aucun incident à exporter pour le moment.");
+        return;
+      }
+      let csvContent = "\uFEFFDate;Immeuble;Bâtiment;Auteur;Catégorie;Titre;Description;Statut;Type\n";
+      incidents.forEach(inc => {
+        const d = new Date(inc.createdAt || Date.now()).toLocaleDateString('fr-FR');
+        const resName = activeResidence ? activeResidence.name : "Résidence";
+        const bldg = inc.building || "A";
+        const author = (inc.authorFullDetails || inc.authorName || "Résident").replace(/;/g, ',');
+        const cat = (inc.category || "Technique").replace(/;/g, ',');
+        const title = (inc.title || "").replace(/;/g, ',');
+        const desc = (inc.description || "").replace(/;/g, ',');
+        const status = inc.status || "nouveau";
+        const scope = inc.scope === "privatif" ? "Privatif" : "Parties Communes";
+        csvContent += `${d};${resName};${bldg};${author};${cat};${title};${desc};${status};${scope}\n`;
+      });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Registre_Pannes_${(activeResidence ? activeResidence.code : 'Export')}_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // ==================== GESTION DU CHANGEMENT DE MOT DE PASSE (PRO & PERSONNEL) ====================
+    function checkForcePasswordChange() {
+      if (currentSessionUser && currentSessionUser.mustChangePassword) {
+        openModal('modalForcePasswordChange');
+      }
+    }
+
+    function handleForcePasswordChangeSubmit(e) {
+      e.preventDefault();
+      const currentTemp = document.getElementById("forceCurrentTempPassword").value.trim();
+      const newPass = document.getElementById("forceNewPassword").value.trim();
+      const confirmPass = document.getElementById("forceConfirmPassword").value.trim();
+      const err = document.getElementById("forcePasswordError");
+
+      err.classList.add("hidden");
+
+      // Vérification du mot de passe temporaire actuel
+      const account = staffAccounts.find(u => u.email.toLowerCase() === currentSessionUser.email.toLowerCase());
+      if (!account || account.password !== currentTemp) {
+        err.innerText = "❌ Le mot de passe temporaire actuel saisi est incorrect.";
+        err.classList.remove("hidden");
+        return;
+      }
+
+      if (newPass.length < 4) {
+        err.innerText = "❌ Le nouveau mot de passe doit comporter au moins 4 caractères.";
+        err.classList.remove("hidden");
+        return;
+      }
+
+      if (newPass !== confirmPass) {
+        err.innerText = "❌ Les deux nouveaux mots de passe ne correspondent pas.";
+        err.classList.remove("hidden");
+        return;
+      }
+
+      // Mise à jour définitive
+      account.password = newPass;
+      account.mustChangePassword = false;
+      localStorage.setItem('resideo_staff_accounts', JSON.stringify(staffAccounts));
+
+      currentSessionUser.mustChangePassword = false;
+      localStorage.setItem('resideo_user', JSON.stringify(currentSessionUser));
+
+      closeModal('modalForcePasswordChange');
+      alert("✓ Votre mot de passe personnel a été enregistré avec succès ! Vous seul le connaissez désormais.");
+    }
+
+    function openPersonalPasswordModal() {
+      openModal('modalPersonalPassword');
+      const err = document.getElementById("personalPasswordError");
+      if (err) err.classList.add("hidden");
+    }
+
+    function handlePersonalPasswordUpdate(e) {
+      e.preventDefault();
+      const currentPass = document.getElementById("personalCurrentPassword").value.trim();
+      const newPass = document.getElementById("personalNewPassword").value.trim();
+      const confirmPass = document.getElementById("personalConfirmPassword").value.trim();
+      const err = document.getElementById("personalPasswordError");
+
+      err.classList.add("hidden");
+
+      // Si Super Admin
+      if (currentSessionUser.role === 'superadmin') {
+        const masterPass = getSuperAdminMasterPassword();
+        if (currentPass !== masterPass) {
+          err.innerText = "❌ Le mot de passe actuel est incorrect.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (newPass.length < 6) {
+          err.innerText = "❌ Le nouveau mot de passe doit comporter au moins 6 caractères.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (newPass !== confirmPass) {
+          err.innerText = "❌ Les nouveaux mots de passe ne correspondent pas.";
+          err.classList.remove("hidden");
+          return;
+        }
+        localStorage.setItem('resideo_superadmin_password', newPass);
+        closeModal('modalPersonalPassword');
+        e.target.reset();
+        alert("✓ Votre mot de passe Super Admin a été mis à jour !");
+        return;
+      }
+
+      // Si Staff Pro
+      const userAccount = staffAccounts.find(u => u.email.toLowerCase() === currentSessionUser.email.toLowerCase());
+      if (userAccount) {
+        if (userAccount.password !== currentPass) {
+          err.innerText = "❌ Le mot de passe actuel est incorrect.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (newPass.length < 4) {
+          err.innerText = "❌ Le nouveau mot de passe doit comporter au moins 4 caractères.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (newPass !== confirmPass) {
+          err.innerText = "❌ Les nouveaux mots de passe ne correspondent pas.";
+          err.classList.remove("hidden");
+          return;
+        }
+        userAccount.password = newPass;
+        userAccount.mustChangePassword = false;
+        localStorage.setItem('resideo_staff_accounts', JSON.stringify(staffAccounts));
+        closeModal('modalPersonalPassword');
+        e.target.reset();
+        alert("✓ Votre mot de passe personnel a été mis à jour avec succès !");
+        return;
+      }
+
+      // Si Résident
+      const residentAccount = registeredResidents.find(r => r.email.toLowerCase() === currentSessionUser.email.toLowerCase());
+      if (residentAccount) {
+        if (residentAccount.password !== currentPass) {
+          err.innerText = "❌ Le mot de passe actuel est incorrect.";
+          err.classList.remove("hidden");
+          return;
+        }
+        if (newPass !== confirmPass) {
+          err.innerText = "❌ Les nouveaux mots de passe ne correspondent pas.";
+          err.classList.remove("hidden");
+          return;
+        }
+        residentAccount.password = newPass;
+        localStorage.setItem('resideo_residents_list', JSON.stringify(registeredResidents));
+        closeModal('modalPersonalPassword');
+        e.target.reset();
+        alert("✓ Votre mot de passe résident a été mis à jour !");
+      }
+    }
+  
+    // =========================================================================
+    // SUPPRESSION AGGRESSIVE DU BADGE / TIROIR NETLIFY (DOM & MUTATIONOBSERVER)
+    // =========================================================================
+    function eradicateNetlifyElements() {
+      try {
+        localStorage.setItem('netlify-drawer-state', 'hidden');
+        sessionStorage.setItem('netlify-drawer-state', 'hidden');
+      } catch(e) {}
+      
+      const selectors = [
+        'iframe[src*="netlify"]',
+        'div[id*="netlify"]',
+        '.netlify-badge',
+        '#netlify-badge',
+        'netlify-drawer',
+        '#netlify-drawer',
+        'div[data-netlify-drawer]',
+        '[data-netlify-preview]',
+        '[data-netlify-deploy-id]',
+        '[class*="netlify-drawer"]'
+      ];
+      selectors.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          try { el.remove(); } catch(e) { el.style.display = 'none'; }
+        });
+      });
+    }
+
+    // Exécuter dès le départ et observer les ajouts dynamiques
+    eradicateNetlifyElements();
+    setInterval(eradicateNetlifyElements, 500);
+
+    const netlifyObserver = new MutationObserver(() => {
+      eradicateNetlifyElements();
+    });
+    netlifyObserver.observe(document.documentElement, { childList: true, subtree: true });
+
+    // =========================================================================
+    // DÉCLENCHEMENT DE LA POP-UP D'INSTALLATION PWA AU SCAN (IPHONE & ANDROID)
+    // =========================================================================
+    let deferredPwaPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPwaPrompt = e;
+      showPwaInstallModal('android');
+    });
+
+    function showPwaInstallModal(platform) {
+      // Ne pas afficher si déjà en mode application PWA autonome
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      if (isStandalone) return;
+
+      const modal = document.getElementById("pwaInstallModal");
+      const androidAction = document.getElementById("pwaAndroidAction");
+      const iosAction = document.getElementById("pwaIosAction");
+      if (!modal) return;
+
+      if (platform === 'ios') {
+        if (androidAction) androidAction.classList.add("hidden");
+        if (iosAction) iosAction.classList.remove("hidden");
+      } else {
+        if (androidAction) androidAction.classList.remove("hidden");
+        if (iosAction) iosAction.classList.add("hidden");
+      }
+
+      modal.classList.remove("hidden");
+    }
+
+    function triggerPwaInstall() {
+      if (deferredPwaPrompt) {
+        deferredPwaPrompt.prompt();
+        deferredPwaPrompt.userChoice.then((choiceResult) => {
+          deferredPwaPrompt = null;
+          dismissPwaPrompt();
+        });
+      } else {
+        dismissPwaPrompt();
+      }
+    }
+
+    function dismissPwaPrompt() {
+      const modal = document.getElementById("pwaInstallModal");
+      if (modal) modal.classList.add("hidden");
+    }
+
+    // Détection iOS au chargement de la page pour proposer le guide d'installation
+    window.addEventListener('load', () => {
+      const isIos = /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase());
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+      if (isIos && !isStandalone) {
+        // Afficher automatiquement le guide après 1.2s sur iPhone
+        setTimeout(() => {
+          showPwaInstallModal('ios');
+        }, 1200);
+      }
+    });
+
+    // =========================================================================
+    // GESTION PERSONNALISÉE DES ASTREINTES / PRESTATAIRES PAR LE BAILLEUR
+    // =========================================================================
+    
+    function handleContractorTradeChange(val) {
+      const c = document.getElementById("customTradeInputContainer");
+      const input = document.getElementById("newContractorCustomTrade");
+      if (!c) return;
+      if (val === 'custom') {
+        c.classList.remove("hidden");
+        if (input) input.focus();
+      } else {
+        c.classList.add("hidden");
+        if (input) input.value = "";
+      }
+    }
+function toggleAddContractorForm(forceState) {
+      const form = document.getElementById("formAddContractor");
+      const btnText = document.getElementById("btnToggleContractorFormText");
+      if (!form) return;
+
+      const shouldShow = (forceState !== undefined) ? forceState : form.classList.contains("hidden");
+      if (shouldShow) {
+        form.classList.remove("hidden");
+        if (btnText) btnText.innerText = "✕ Fermer le formulaire d'ajout";
+        document.getElementById("newContractorCompany").focus();
+      } else {
+        form.classList.add("hidden");
+        if (btnText) btnText.innerText = "+ Ajouter un prestataire d'astreinte pour cet immeuble";
+      }
+    }
+
+    function handleAddNewContractor(e) {
+      e.preventDefault();
+      if (!activeResidence) {
+        alert("Veuillez d'abord sélectionner une résidence.");
+        return;
+      }
+
+      const tradeSelectVal = document.getElementById("newContractorTrade").value;
+      const customTradeVal = document.getElementById("newContractorCustomTrade") ? document.getElementById("newContractorCustomTrade").value.trim() : "";
+      const trade = (tradeSelectVal === 'custom') 
+        ? (customTradeVal ? `🔧 ${customTradeVal}` : "🔧 Maintenance Spécialisée") 
+        : tradeSelectVal;
+      const company = document.getElementById("newContractorCompany").value.trim();
+      const phone = document.getElementById("newContractorPhone").value.trim();
+      const isUrgent = document.getElementById("newContractorUrgent").checked;
+
+      if (!activeResidence.contractors) {
+        activeResidence.contractors = [];
+      }
+
+      const newContractor = {
+        id: "ct_" + Date.now(),
+        trade: trade,
+        company: company,
+        phone: phone,
+        urgent: isUrgent,
+        addedBy: currentSessionUser ? currentSessionUser.email : "Bailleur",
+        addedAt: Date.now()
+      };
+
+      activeResidence.contractors.unshift(newContractor);
+
+      // Synchroniser dans residencesData
+      const resIndex = residencesData.findIndex(r => r.id === activeResidence.id);
+      if (resIndex !== -1) {
+        residencesData[resIndex] = activeResidence;
+      }
+      localStorage.setItem('resideo_residences', JSON.stringify(residencesData));
+
+      e.target.reset();
+      toggleAddContractorForm(false);
+      openEmergencyModal();
+      alert(`✓ Prestataire "${company}" (${trade}) ajouté aux numéros d'urgence de ${activeResidence.name} !`);
+    }
+
+    function deleteCustomContractor(contractorId) {
+      if (!activeResidence || !activeResidence.contractors) return;
+      if (!confirm("Voulez-vous supprimer ce prestataire de la liste des astreintes ?")) return;
+
+      activeResidence.contractors = activeResidence.contractors.filter(c => (c.id !== contractorId && c.phone !== contractorId));
+
+      const resIndex = residencesData.findIndex(r => r.id === activeResidence.id);
+      if (resIndex !== -1) {
+        residencesData[resIndex] = activeResidence;
+      }
+      localStorage.setItem('resideo_residences', JSON.stringify(residencesData));
+
+      openEmergencyModal();
+    }
+</script>
+
+  <!-- ==================== BANNIÈRE / MODAL D'INSTALLATION PWA (ÉCRAN D'ACCUEIL) ==================== -->
+  <div id="pwaInstallModal" class="fixed inset-x-0 bottom-0 z-[100000] p-3 sm:p-4 hidden transition-all duration-300">
+    <div class="max-w-md mx-auto bg-slate-900 text-white p-4 rounded-3xl shadow-2xl border border-teal-500/30 flex flex-col space-y-3 backdrop-blur-md bg-slate-900/95">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center space-x-3">
+          <img src="icon-192.png" alt="Logo Résidéo" class="w-12 h-12 rounded-2xl shadow-md border border-white/20 object-cover flex-shrink-0">
+          <div>
+            <h4 class="font-extrabold text-sm text-white flex items-center space-x-1.5">
+              <span>Installer l'application Résidéo</span>
+              <span class="text-[9px] bg-teal-500/20 text-teal-300 border border-teal-500/40 px-1.5 py-0.5 rounded-full font-bold">1 clic</span>
+            </h4>
+            <p class="text-[11px] text-slate-300 mt-0.5">Ajoutez l'application sur votre écran d'accueil pour recevoir les alertes de votre hall et signaler vos pannes plus vite.</p>
+          </div>
+        </div>
+        <button onclick="dismissPwaPrompt()" class="text-slate-400 hover:text-white p-1 rounded-full"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <!-- Action Android / Chrome / PC -->
+      <div id="pwaAndroidAction" class="pt-1 flex items-center space-x-2">
+        <button onclick="dismissPwaPrompt()" class="flex-1 py-2 text-xs font-bold text-slate-400 hover:text-white rounded-xl transition bg-slate-800">Plus tard</button>
+        <button onclick="triggerPwaInstall()" class="flex-2 py-2 px-4 bg-teal-500 hover:bg-teal-600 text-slate-950 font-black text-xs rounded-xl shadow-md transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Ajouter à l'écran d'accueil</span>
+        </button>
+      </div>
+
+      <!-- Guide iOS / iPhone (Safari ne supporte pas l'installation automatique en 1 clic) -->
+      <div id="pwaIosAction" class="hidden p-3 bg-slate-800/90 rounded-2xl border border-slate-700 text-xs space-y-2">
+        <p class="text-[11px] font-bold text-teal-300 flex items-center space-x-1.5">
+          <span>📲 Installation sur iPhone / iPad :</span>
+        </p>
+        <ol class="list-decimal list-inside text-[11px] text-slate-300 space-y-1">
+          <li>Appuyez sur le bouton <strong>Partager</strong> en bas de Safari (l'icône carré avec une flèche vers le haut <span class="font-bold text-white text-sm">⎋</span>).</li>
+          <li>Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong> (icône <span class="font-bold text-white text-sm">⊞</span>).</li>
+          <li>Appuyez sur <strong>Ajouter</strong> en haut à droite.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

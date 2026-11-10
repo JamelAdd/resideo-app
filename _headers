@@ -1,0 +1,4 @@
+/*
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: frame-src 'self' https://*.firebaseapp.com https://*.firebase.com; child-src 'self';
